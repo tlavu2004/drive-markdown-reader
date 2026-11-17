@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Drive Markdown Reader",
+  "version": "1.0",
+  "description": "Renders Markdown files directly in Google Drive preview.",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Render Markdown"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://drive.google.com/*"
+      ],
+      "js": [
+        "src/lib/marked.min.js",
+        "src/lib/mermaid.min.js",
+        "src/content.js"
+      ],
+      "css": [
+        "src/styles.css"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/lib/marked.min.js"
+      ],
+      "matches": [
+        "https://drive.google.com/*"
+      ]
+    }
+  ]
+}
