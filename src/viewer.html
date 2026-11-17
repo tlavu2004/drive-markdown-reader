@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Markdown Preview</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="lib/marked.min.js"></script>
+  <script src="lib/mermaid.min.js"></script>
+</head>
+
+<body>
+  <div class="drive-md-toolbar">
+    <div class="drive-md-title">Markdown Preview</div>
+    <div class="drive-md-actions">
+      <button class="drive-md-btn drive-md-icon-btn" id="drive-md-mermaid-toggle" title="Toggle Mermaid Graph/Code">
+        📊 Graph
+      </button>
+
+      <div class="drive-md-btn-group">
+        <button class="drive-md-btn drive-md-icon-btn" id="drive-md-nav-prev" title="Previous File">⬅️</button>
+        <button class="drive-md-btn drive-md-icon-btn" id="drive-md-nav-next" title="Next File">➡️</button>
+      </div>
+
+      <div class="drive-md-btn-group">
+        <button class="drive-md-btn drive-md-icon-btn" id="drive-md-zoom-out" title="Zoom Out">➖</button>
+        <button class="drive-md-btn drive-md-icon-btn" id="drive-md-zoom-reset" title="Reset Zoom">100%</button>
+        <button class="drive-md-btn drive-md-icon-btn" id="drive-md-zoom-in" title="Zoom In">➕</button>
+      </div>
+
+      <button class="drive-md-btn drive-md-icon-btn" id="drive-md-darkmode" title="Toggle Dark Mode">
+        🌙 Dark
+      </button>
+      <button class="drive-md-btn drive-md-close-btn" id="drive-md-close" title="Close">
+        ✕ Close
+      </button>
+    </div>
+  </div>
+  <div id="content" class="drive-md-reader-content">
+    <!-- Content will be injected here -->
+  </div>
+  <script src="viewer.js"></script>
+</body>
+
+</html>

@@ -30,7 +30,11 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "src/lib/marked.min.js"
+        "src/lib/marked.min.js",
+        "src/lib/mermaid.min.js",
+        "src/styles.css",
+        "src/viewer.html",
+        "src/viewer.js"
       ],
       "matches": [
         "https://drive.google.com/*"

@@ -12,29 +12,20 @@
     --blockquote-color: #6a737d;
 }
 
-.drive-md-reader-container {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+/* Global Body for Viewer */
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
     background: var(--bg-color);
-    z-index: 2147483647;
-    overflow-y: auto;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     line-height: 1.6;
     color: var(--text-color);
-    box-sizing: border-box;
-    padding-top: 60px;
-
-    pointer-events: auto;
-    user-select: text !important;
-    -webkit-user-select: text !important;
     transition: background 0.3s, color 0.3s;
+    overflow-x: hidden;
 }
 
-/* Dark Mode Overrides */
-.drive-md-reader-container.dark-mode {
+body.dark-mode {
     --bg-color: #0d1117;
     --text-color: #c9d1d9;
     --border-color: #30363d;
@@ -44,11 +35,10 @@
     --blockquote-color: #8b949e;
 }
 
-/* Floating Toolbar */
+/* Toolbar */
 .drive-md-toolbar {
-    position: fixed;
+    position: sticky;
     top: 0;
-    left: 0;
     width: 100%;
     height: 56px;
     background: var(--toolbar-bg);
@@ -59,9 +49,7 @@
     justify-content: space-between;
     padding: 0 24px;
     box-sizing: border-box;
-    z-index: 2147483647;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-    transition: background 0.3s, border 0.3s;
+    z-index: 1000;
 }
 
 .drive-md-title {
@@ -90,10 +78,32 @@
     outline: none;
 }
 
+.drive-md-btn-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    /* Tighter gap for group */
+    background: var(--bg-color);
+    /* Optional: distinct bg? */
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    padding: 2px;
+}
+
+.drive-md-btn-group .drive-md-btn {
+    border: none;
+    /* Remove individual borders if grouped */
+    padding: 6px 10px;
+}
+
 .drive-md-icon-btn {
     background: transparent;
     border: 1px solid var(--border-color);
     color: var(--text-color);
+}
+
+.drive-md-btn-group .drive-md-icon-btn {
+    border: none;
 }
 
 .drive-md-icon-btn:hover {
@@ -107,23 +117,17 @@
 
 .drive-md-close-btn:hover {
     background: #c62828;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 5px rgba(229, 57, 53, 0.3);
-}
-
-.drive-md-close-btn:active {
-    transform: translateY(0);
 }
 
 /* Content Area */
 .drive-md-reader-content {
     max-width: 900px;
     margin: 0 auto;
-    background: transparent;
     padding: 40px;
-    user-select: text !important;
-    -webkit-user-select: text !important;
-    cursor: text;
+
+    /* Zoom Support */
+    transform-origin: top center;
+    transition: transform 0.2s ease-out;
 }
 
 .drive-md-reader-content h1 {
@@ -196,10 +200,32 @@
     border-radius: 4px;
 }
 
-/* Mermaid center */
+/* Mermaid */
+.mermaid-block {
+    margin: 20px 0;
+    text-align: center;
+}
+
 .mermaid {
     display: flex;
     justify-content: center;
-    margin: 20px 0;
     overflow-x: auto;
+}
+
+.mermaid-source {
+    display: none;
+    text-align: left;
+    background-color: var(--code-bg);
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    overflow: auto;
+}
+
+body.show-mermaid-source .mermaid {
+    display: none;
+}
+
+body.show-mermaid-source .mermaid-source {
+    display: block;
 }
