@@ -96,6 +96,16 @@ async function renderContent(markdownText) {
 }
 
 
-return renderContent;
+let version = 0;
+let queue = Promise.resolve();
+function scheduleRender(markdown) {
+  const requestedVersion = ++version;
+  queue = queue.catch(() => {}).then(() => {
+    if (requestedVersion === version) return renderContent(markdown);
+  });
+  return queue;
+}
+scheduleRender.cancel = () => { version++; };
+return scheduleRender;
 };
 })();

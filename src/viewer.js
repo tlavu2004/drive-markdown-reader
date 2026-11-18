@@ -4,6 +4,8 @@ const driveOrigin = 'https://drive.google.com';
 let isDarkMode = true;
 let isMermaidSource = false;
 let currentZoom = 1.0;
+let currentMarkdown = null;
+let renderVersion = 0;
 
 // UI Elements
 const contentDiv = document.getElementById('content');
@@ -17,6 +19,14 @@ const btnPrev = document.getElementById('drive-md-nav-prev');
 const btnNext = document.getElementById('drive-md-nav-next');
 
 const renderContent = window.createMarkdownRenderer(contentDiv, () => isDarkMode);
+
+function renderCurrentMarkdown() {
+  if (currentMarkdown === null) return;
+  const version = ++renderVersion;
+  renderContent(currentMarkdown).catch(error => {
+    if (version === renderVersion) contentDiv.textContent = `Unable to render Markdown: ${error.message}`;
+  });
+}
 
 // Handlers
 function updateTheme() {
@@ -63,6 +73,7 @@ updateZoom();
 btnDark.addEventListener('click', () => {
   isDarkMode = !isDarkMode;
   updateTheme();
+  renderCurrentMarkdown();
 });
 
 btnMermaid.addEventListener('click', () => {
@@ -102,10 +113,14 @@ window.addEventListener('message', (event) => {
   if (event.source !== window.parent || event.origin !== driveOrigin) return;
   if (!event.data || typeof event.data !== 'object') return;
   if (event.data.action === 'RENDER_ERROR' && typeof event.data.content === 'string') {
+    currentMarkdown = null;
+    renderVersion++;
+    renderContent.cancel();
     contentDiv.textContent = `Unable to load Markdown: ${event.data.content}`;
   }
   if (event.data.action === 'RENDER' && typeof event.data.content === 'string') {
-    renderContent(event.data.content);
+    currentMarkdown = event.data.content;
+    renderCurrentMarkdown();
   }
 });
 
