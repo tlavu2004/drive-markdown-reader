@@ -26,8 +26,7 @@
         if (manualTrigger) dismissedPreview = null;
         if (!manualTrigger && dismissedPreview === getPreviewKey()) return;
 
-        // If triggering manually or navigating, we allow re-rendering even if flag is set,
-        // but we must clean up first.
+        // Manual open and sibling navigation replace the current viewer.
         if (isRendering && manualTrigger) {
             cleanupViewer(); // Force reset
         } else if (isRendering) {
@@ -51,7 +50,7 @@
         createIframe();
         let text = null;
         let loadError = null;
-        let fileId = explicitId || getFileIdFromUrl() || getFileIdFromDom();
+        const fileId = explicitId || getFileIdFromUrl() || getFileIdFromDom();
 
         try {
             if (fileId) {
@@ -124,20 +123,20 @@
         if (!data || typeof data !== 'object') return;
         if (!['VIEWER_READY', 'CLOSE_VIEWER', 'NAVIGATE'].includes(data.action)) return;
         if (data.action === 'NAVIGATE' && data.direction !== -1 && data.direction !== 1) return;
-        if (event.data.action === 'VIEWER_READY') {
+        if (data.action === 'VIEWER_READY') {
             viewerReady = true;
             flushViewerMessage();
         }
 
-        if (event.data.action === 'CLOSE_VIEWER') {
+        if (data.action === 'CLOSE_VIEWER') {
             dismissedPreview = getPreviewKey();
             clearTimeout(autoLaunchTimer);
             autoLaunchTimer = null;
             cleanupViewer();
         }
 
-        if (event.data.action === 'NAVIGATE') {
-            const direction = event.data.direction; // -1 or 1
+        if (data.action === 'NAVIGATE') {
+            const direction = data.direction; // -1 or 1
             const nextId = findSiblingId(currentRenderedId, direction);
 
             if (nextId) {

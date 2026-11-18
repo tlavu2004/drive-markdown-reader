@@ -12,7 +12,7 @@ A powerful Chrome Extension that renders **Markdown** files directly within Goog
 -   **🌓 Dark Mode**: Built-in Dark/Light theme switcher with persistence.
 -   **🔍 Zoom Controls**: Zoom In/Out (50% - 250%) for better readability.
 -   **Code/Graph Toggle**: Switch Mermaid diagrams between rendered view and source code with a single click.
--   **Isolated Viewer**: Runs in a secure Iframe sandbox to avoid conflicts with Google Drive's scripts and CSP.
+-   **Isolated Viewer**: Runs in a extension-origin iframe to avoid conflicts with Google Drive's scripts and CSP.
 -   **Syntax Highlighting**: Clean styling for code blocks.
 
 ## 🛠️ Installation
@@ -39,12 +39,38 @@ A powerful Chrome Extension that renders **Markdown** files directly within Goog
 
 This extension uses a **Content Script + Iframe** architecture to ensure stability:
 
--   **Content Script (`content.js`)**: Detects Markdown files and fetches the raw content from Drive.
--   **Viewer (`src/viewer.html`)**: A sandboxed page running inside an Iframe. This ensures libraries like `Mermaid.js` run without being blocked by Google Drive's strict Content Security Policy (CSP).
--   **Communication**: The Content Script sends the raw text to the Viewer via `postMessage`.
+-   **Drive helpers (`src/drive.js`)**: Detect file IDs, locate preview text and sibling files, and validate downloads.
+-   **Content controller (`src/content.js`)**: Own viewer lifecycle, request cancellation, automatic opening and message validation.
+-   **Renderer (`src/render.js`)**: Parse and sanitize Markdown, preserve Mermaid source, and serialize diagram rendering.
+-   **Viewer (`src/viewer.html`, `src/viewer.js`)**: Own toolbar controls, saved preferences and display state in an extension-origin iframe.
+-   **Popup (`popup.js`)**: Request manual opening and inject the content entry points when necessary.
+-   **Communication**: Validate message source, origin and payload; send only to the intended origin.
+
+### Development and verification
+
+The unpacked extension includes its runtime libraries; installing Node dependencies is only needed for development.
+
+```sh
+npm ci
+npm test
+```
+
+After updating the pinned DOMPurify dependency, run `npm run vendor` and commit the generated `src/lib/purify.min.js` together with its license. Runtime libraries are bundled locally; no CDN is required.
+
+Regression tests use jsdom, the bundled Marked and DOMPurify, simulated Drive responses, and a Mermaid stub. They cover unsafe content, message validation, close/reopen behavior, stale requests, download errors, and theme rendering order. Real Drive selectors, authenticated downloads, Chrome extension isolation and actual Mermaid SVG layout still need browser verification.
+
+Manual smoke checks after reloading the extension:
+
+1. Open Markdown in a standalone Drive preview and a folder preview; check a short and an empty file.
+2. Close the viewer, interact with Drive, and confirm it stays closed; reopen it using the popup.
+3. Switch files or close while downloading; confirm old content never reappears.
+4. Confirm a denied download shows a readable error and remains closable.
+5. Render a valid and an invalid Mermaid block, toggle theme repeatedly, then verify zoom and Graph/Code controls still work.
+6. Verify Previous/Next on the available Drive list/grid; virtualized items outside the DOM may not be discoverable.
 
 ### Libraries Used
 -   [Marked.js](https://marked.js.org/) (Markdown Parser)
+-   [DOMPurify](https://github.com/cure53/DOMPurify) (HTML Sanitizer)
 -   [Mermaid.js](https://mermaid.js.org/) (Diagrams)
 
 ## 📝 License

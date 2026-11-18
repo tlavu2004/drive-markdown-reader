@@ -54,3 +54,18 @@ test('navigating away aborts loading and late response cannot reopen viewer', as
     assert.equal(app.frame(), null);
   } finally { app.dom.window.close(); }
 });
+test('extracted Drive navigation preserves Previous and Next file behavior', async () => {
+  const app = drive();
+  try {
+    app.w.document.body.insertAdjacentHTML('beforeend', '<div><div data-id="fileA"></div><div data-id="fileB"></div></div>');
+    app.w.fetch = async url => ({ ok: true, text: async () => new URL(url).searchParams.get('id') });
+    await app.tick();
+    app.send({ action: 'NAVIGATE', direction: 1 }); await app.settle();
+    let message;
+    app.frame().contentWindow.postMessage = data => { message = data; };
+    app.send({ action: 'VIEWER_READY' }); assert.equal(message.content, 'fileB');
+    app.send({ action: 'NAVIGATE', direction: -1 }); await app.settle();
+    app.frame().contentWindow.postMessage = data => { message = data; };
+    app.send({ action: 'VIEWER_READY' }); assert.equal(message.content, 'fileA');
+  } finally { app.dom.window.close(); }
+});
