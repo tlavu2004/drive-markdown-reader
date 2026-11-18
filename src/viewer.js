@@ -101,6 +101,9 @@ btnClose.addEventListener('click', () => {
 window.addEventListener('message', (event) => {
   if (event.source !== window.parent || event.origin !== driveOrigin) return;
   if (!event.data || typeof event.data !== 'object') return;
+  if (event.data.action === 'RENDER_ERROR' && typeof event.data.content === 'string') {
+    contentDiv.textContent = `Unable to load Markdown: ${event.data.content}`;
+  }
   if (event.data.action === 'RENDER' && typeof event.data.content === 'string') {
     renderContent(event.data.content);
   }

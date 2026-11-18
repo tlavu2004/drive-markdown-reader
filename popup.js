@@ -59,7 +59,7 @@ document.getElementById('btn-render').addEventListener('click', async () => {
       status.textContent = "Render triggered!";
       status.style.color = "green";
     } else {
-      status.textContent = response.reason || "Failed.";
+      status.textContent = response?.reason || "Failed.";
       status.style.color = "orange";
     }
   }

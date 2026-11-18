@@ -41,14 +41,38 @@
     }
 
     function scrapePreviewText() {
-        const containers = document.querySelectorAll('pre, .CodeMirror-code, .a-b-r-Q, .a-b-r-Q-z');
-        for (const c of containers) {
-            if (c.innerText.length > 20) return c.innerText;
-        }
-        if (document.body.childElementCount < 20 && document.body.innerText.length > 20) {
-            return document.body.innerText;
+        const dialogs = [...document.querySelectorAll('[role="dialog"]')]
+            .filter(el => !el.closest('[hidden], [aria-hidden="true"]'));
+        const roots = dialogs.length ? dialogs :
+            (getFileIdFromUrl() ? [...document.querySelectorAll('main, [role="main"]')] : []);
+        for (const root of roots) {
+            for (const node of root.querySelectorAll('pre, .CodeMirror-code, .a-b-r-Q, .a-b-r-Q-z')) {
+                if (node.closest('[hidden], [aria-hidden="true"]')) continue;
+                const text = node.innerText ?? node.textContent;
+                if (text.length) return text;
+            }
         }
         return null;
+    }
+
+    async function fetchMarkdown(fileId, signal) {
+        const response = await fetch(`https://drive.google.com/uc?id=${encodeURIComponent(fileId)}&export=download`, { signal });
+        if (!response.ok) throw new Error(`Drive download failed (HTTP ${response.status}).`);
+        if (response.url) {
+            const host = new URL(response.url).hostname;
+            if (host !== 'drive.google.com' && !host.endsWith('.googleusercontent.com')) {
+                throw new Error('Drive redirected to a login or unsupported download page.');
+            }
+        }
+        const type = (response.headers?.get('content-type') || '').split(';')[0].trim().toLowerCase();
+        if (type && !['text/plain', 'text/markdown', 'text/x-markdown', 'application/markdown', 'application/octet-stream'].includes(type)) {
+            throw new Error(`Expected Markdown text, received ${type}.`);
+        }
+        const text = await response.text();
+        if (/^\s*(?:<!doctype\s+html|<html(?:\s|>))/i.test(text) || text.includes('\0')) {
+            throw new Error('Drive returned an HTML page or binary content instead of Markdown.');
+        }
+        return text;
     }
 
     // --- Navigation Logic ---
@@ -117,5 +141,5 @@
         return null;
     }
 
-    window.DriveMarkdown = { getFileIdFromUrl, getFileIdFromDom, isMarkdownFile, scrapePreviewText, findSiblingId };
+    window.DriveMarkdown = { getFileIdFromUrl, getFileIdFromDom, isMarkdownFile, scrapePreviewText, fetchMarkdown, findSiblingId };
 })();

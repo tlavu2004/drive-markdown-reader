@@ -10,7 +10,7 @@ test('viewer accepts only typed render messages from Drive parent', async () => 
     send(null); send({ action: 'RENDER', content: {} });
     send({ action: 'RENDER', content: 'wrong origin' }, 'https://evil.test');
     send({ action: 'RENDER', content: 'wrong source' }, undefined, {});
-    assert.equal(content.textContent.trim(), '');
+    assert.equal(content.textContent.trim(), 'Loading Markdown…');
     send({ action: 'RENDER', content: '# Valid' });
     assert.equal(content.querySelector('h1').textContent, 'Valid');
   } finally { dom.window.close(); }

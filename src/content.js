@@ -3,7 +3,7 @@
     if (window.hasDriveMarkdownReader) return;
     window.hasDriveMarkdownReader = true;
 
-    const { getFileIdFromUrl, getFileIdFromDom, isMarkdownFile, scrapePreviewText, findSiblingId } = window.DriveMarkdown;
+    const { getFileIdFromUrl, getFileIdFromDom, isMarkdownFile, scrapePreviewText, fetchMarkdown, findSiblingId } = window.DriveMarkdown;
 
     const viewerOrigin = chrome.runtime.getURL('').replace(/\/$/, '');
 
@@ -18,7 +18,8 @@
     let requestVersion = 0;
     let activeRequest = null;
     let isRendering = false;
-    let pendingContent = null;
+    let pendingMessage = null;
+    let viewerReady = false;
     let currentRenderedId = null; // Track what we are currently showing
 
     async function launchViewer(manualTrigger = false, explicitId = null) {
@@ -47,38 +48,34 @@
         const controller = new AbortController();
         activeRequest = controller;
         const isCurrent = () => version === requestVersion && !controller.signal.aborted && preview === getPreviewKey();
+        createIframe();
         let text = null;
+        let loadError = null;
         let fileId = explicitId || getFileIdFromUrl() || getFileIdFromDom();
 
         try {
             if (fileId) {
                 currentRenderedId = fileId; // Store for navigation
                 try {
-                    const resp = await fetch(`https://drive.google.com/uc?id=${fileId}&export=download`, { signal: controller.signal });
-                    if (resp.ok) text = await resp.text();
+                    text = await fetchMarkdown(fileId, controller.signal);
                 } catch (e) {
                     if (!isCurrent()) return;
-                    console.warn("Fetch failed", e);
+                    loadError = e;
                 }
             }
 
             if (!isCurrent()) return;
-            if (!text && !explicitId) text = scrapePreviewText(); // Only scrape if no explicit ID (fallback)
-
-            if (!text) {
-                if (manualTrigger) alert("Cannot find Markdown content.");
-                isRendering = false;
-                return;
-            }
-
-            // Store content to send when viewer is ready
-            pendingContent = text;
-            createIframe();
+            if (text === null && !explicitId) text = scrapePreviewText();
+            if (text === null) throw loadError || new Error('Cannot find Markdown in the active Drive preview.');
+            pendingMessage = { action: 'RENDER', content: text };
+            flushViewerMessage();
+            return { success: true };
 
         } catch (err) {
             if (!isCurrent()) return;
-            console.error("DriveMD Logic Error:", err);
-            cleanupViewer();
+            pendingMessage = { action: 'RENDER_ERROR', content: err.message || 'Unable to load Markdown.' };
+            flushViewerMessage();
+            return { success: false, reason: pendingMessage?.content || err.message };
         }
     }
 
@@ -89,8 +86,17 @@
         const iframe = document.getElementById('drive-md-viewer-frame');
         if (iframe) iframe.remove();
         isRendering = false;
-        pendingContent = null;
+        pendingMessage = null;
+        viewerReady = false;
         currentRenderedId = null;
+    }
+
+    function flushViewerMessage() {
+        const frame = document.getElementById('drive-md-viewer-frame');
+        if (frame && viewerReady && pendingMessage) {
+            frame.contentWindow.postMessage(pendingMessage, viewerOrigin);
+            pendingMessage = null;
+        }
     }
 
     function createIframe() {
@@ -119,14 +125,8 @@
         if (!['VIEWER_READY', 'CLOSE_VIEWER', 'NAVIGATE'].includes(data.action)) return;
         if (data.action === 'NAVIGATE' && data.direction !== -1 && data.direction !== 1) return;
         if (event.data.action === 'VIEWER_READY') {
-            const iframe = document.getElementById('drive-md-viewer-frame');
-            if (iframe && pendingContent) {
-                iframe.contentWindow.postMessage({
-                    action: 'RENDER',
-                    content: pendingContent
-                }, viewerOrigin);
-                pendingContent = null;
-            }
+            viewerReady = true;
+            flushViewerMessage();
         }
 
         if (event.data.action === 'CLOSE_VIEWER') {
@@ -151,8 +151,8 @@
 
     chrome.runtime.onMessage.addListener((req, sender, sendResp) => {
         if (req && req.action === "RENDER_NOW") {
-            launchViewer(true);
-            sendResp({ success: true });
+            launchViewer(true).then(result => sendResp(result || { success: false, reason: 'Loading was cancelled.' }));
+            return true;
         }
     });
 

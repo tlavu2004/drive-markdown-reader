@@ -28,7 +28,7 @@ test('late fetch result cannot replace a newer manually opened file', async () =
       }
       return { ok: true, text: async () => '# New content' };
     };
-    await app.tick(); assert.equal(app.frame(), null);
+    await app.tick(); assert.ok(app.frame());
     app.manual(); await app.settle();
     assert.equal(signalA.aborted, true);
     const frame = app.frame(); assert.ok(frame);
