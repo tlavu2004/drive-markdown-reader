@@ -1,14 +1,11 @@
 import { useLayoutEffect, useState } from 'react';
-import { isContentMessage, type ViewerMessage } from '../../shared/messages';
+import { isContentMessage } from '../../shared/messages';
+import { driveOrigin, sendToDrive } from './protocol';
 
 export type ViewerState =
   | { status: 'loading' }
   | { status: 'ready'; markdown: string }
   | { status: 'error'; message: string };
-const driveOrigin = 'https://drive.google.com';
-export function sendToDrive(message: ViewerMessage) {
-  window.parent.postMessage(message, driveOrigin);
-}
 export function useViewerMessages() {
   const [state, setState] = useState<ViewerState>({ status: 'loading' });
   useLayoutEffect(() => {

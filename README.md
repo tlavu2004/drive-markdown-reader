@@ -41,8 +41,8 @@ This extension uses a **Content Script + Iframe** architecture to ensure stabili
 
 -   **Drive helpers (`src/content/drive.ts`)**: Detect file IDs, locate preview text and sibling files, and validate downloads.
 -   **Content controller (`src/content/index.ts`)**: Own viewer lifecycle, request cancellation, automatic opening and message validation.
--   **Renderer (`src/viewer/render.ts`)**: Parse and sanitize Markdown, preserve Mermaid source, and serialize diagram rendering.
--   **React viewer (`src/viewer/main.tsx`, `src/viewer/Viewer.tsx`)**: Mount components in an extension-origin iframe. `Toolbar`, `ViewerStatus` and `MarkdownContent` retain the existing controls, loading/error messages and reader styling.
+-   **Renderer (`src/viewer/rendering/createMarkdownRenderer.ts`)**: Parse and sanitize Markdown, preserve Mermaid source, and serialize diagram rendering.
+-   **React viewer (`src/viewer/main.tsx`, `src/viewer/app/Viewer.tsx`)**: Mount components in an extension-origin iframe. `Toolbar`, `ViewerStatus` and `MarkdownContent` retain the existing controls, loading/error messages and reader styling.
 -   **Popup (`src/popup/popup.ts`)**: Request manual opening and inject the content entry points when necessary.
 -   **Communication**: Validate message source, origin and payload; send only to the intended origin.
 
@@ -64,13 +64,23 @@ src/
     popup.ts
   viewer/
     index.html
-    viewer.css
     main.tsx
-    mount.tsx
-    Viewer.tsx
+    app/
+      mount.tsx
+      Viewer.tsx
+      viewer.css
     components/
+      Toolbar.tsx
+      ViewerStatus.tsx
+      MarkdownContent.tsx
     hooks/
-    render.ts
+      usePreferences.ts
+    rendering/
+      RenderedMarkdown.tsx
+      createMarkdownRenderer.ts
+    messaging/
+      protocol.ts
+      useViewerMessages.ts
   shared/              # Typed messages, DOM utilities and runtime paths
   types/vendor.d.ts    # Contracts for the existing vendor globals
 vendor/
@@ -108,6 +118,8 @@ npm run check
 - `npm run dev`: build and watch both HTML pages and the classic content script. Reload the extension in Chrome after a rebuild; this does not use a Vite dev server or HMR in the extension.
 
 Popup and viewer use native ES modules; the content script bundles its imports into a classic IIFE so both manifest loading and manual `chrome.scripting.executeScript` work. Source maps are generated for debugging. Vendored parser, sanitizer and Mermaid versions remain unchanged. React/React DOM are bundled locally into the viewer entry; no CDN or extra extension permission is required.
+
+Viewer layout groups bootstrap and styling under `app/`, UI under `components/`, preferences under `hooks/`, renderer ownership under `rendering/`, and the Drive bridge under `messaging/`. The viewer root contains only its HTML and TypeScript entry points. Toolbar actions are passed from `Viewer` as callbacks, so the component has no dependency on a hook or the messaging bridge.
 
 Viewer lifecycle:
 

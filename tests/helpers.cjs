@@ -7,7 +7,7 @@ const compiled = new Map();
 function load(window, file) {
   if (file === 'src/viewer/main.tsx') {
     if (!compiled.has(file)) compiled.set(file, buildSync({
-      stdin: { contents: "export { act } from 'react'; export { mountViewer } from './src/viewer/mount';", resolveDir: root, loader: 'ts' },
+      stdin: { contents: "export { act } from 'react'; export { mountViewer } from './src/viewer/app/mount';", resolveDir: root, loader: 'ts' },
       bundle: true, write: false, format: 'iife', globalName: '__testModule',
       define: { 'process.env.NODE_ENV': '"development"' }, target: 'chrome120'
     }).outputFiles[0].text);
@@ -29,7 +29,7 @@ function load(window, file) {
     }).outputFiles[0].text);
     window.eval(compiled.get(file) + '\nwindow.__testModule = __testModule;');
     if (file.endsWith('/drive.ts')) window.DriveMarkdown = window.__testModule;
-    if (file.endsWith('/render.ts')) window.createMarkdownRenderer = window.__testModule.createMarkdownRenderer;
+    if (file.endsWith('/createMarkdownRenderer.ts')) window.createMarkdownRenderer = window.__testModule.createMarkdownRenderer;
     return;
   }
   window.eval(fs.readFileSync(path.join(root, file), 'utf8'));
@@ -46,7 +46,7 @@ function viewer() {
   };
   const calls = [];
   w.mermaid = { initialize: config => calls.push(config), run: async () => {} };
-  for (const file of ['vendor/dompurify/purify.min.js', 'vendor/marked/marked.min.js', 'src/viewer/render.ts']) load(w, file);
+  for (const file of ['vendor/dompurify/purify.min.js', 'vendor/marked/marked.min.js', 'src/viewer/rendering/createMarkdownRenderer.ts']) load(w, file);
   return { dom, w, calls, content: w.document.getElementById('content') };
 }
 module.exports = { load, viewer };

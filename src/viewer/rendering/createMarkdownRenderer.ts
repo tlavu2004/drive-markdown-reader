@@ -1,4 +1,4 @@
-import { errorMessage } from '../shared/messages';
+import { errorMessage } from '../../shared/messages';
 
 // Mermaid has shared configuration, so serialize work across mounts as well as renders.
 let diagramQueue: Promise<void> = Promise.resolve();
