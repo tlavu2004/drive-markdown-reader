@@ -19,6 +19,7 @@
       "js": [
         "src/lib/marked.min.js",
         "src/lib/mermaid.min.js",
+        "src/drive.js",
         "src/content.js"
       ],
       "css": [
@@ -34,7 +35,8 @@
         "src/lib/mermaid.min.js",
         "src/styles.css",
         "src/viewer.html",
-        "src/viewer.js"
+        "src/viewer.js",
+        "src/render.js"
       ],
       "matches": [
         "https://drive.google.com/*"
