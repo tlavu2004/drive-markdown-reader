@@ -9,11 +9,20 @@
 
     // --- Main Logic ---
 
+    function getPreviewKey() {
+        return `${location.href}|${document.title}|${getFileIdFromUrl() || getFileIdFromDom() || ''}`;
+    }
+
+    let dismissedPreview = null;
+    let autoLaunchTimer = null;
     let isRendering = false;
     let pendingContent = null;
     let currentRenderedId = null; // Track what we are currently showing
 
     async function launchViewer(manualTrigger = false, explicitId = null) {
+        if (manualTrigger) dismissedPreview = null;
+        if (!manualTrigger && dismissedPreview === getPreviewKey()) return;
+
         // If triggering manually or navigating, we allow re-rendering even if flag is set,
         // but we must clean up first.
         if (isRendering && manualTrigger) {
@@ -107,6 +116,9 @@
         }
 
         if (event.data.action === 'CLOSE_VIEWER') {
+            dismissedPreview = getPreviewKey();
+            clearTimeout(autoLaunchTimer);
+            autoLaunchTimer = null;
             cleanupViewer();
         }
 
@@ -130,34 +142,32 @@
         }
     });
 
-    let lastTitle = document.title;
-    const observer = new MutationObserver(() => {
-        if (document.title !== lastTitle) {
-            lastTitle = document.title;
-            // Only auto-close if we relied on implicit ID.
-            // If explicit navigation happened, maybe we shouldn't close?
-            // Actually, if title changes, it usually means user navigated in the background Drive app.
-            // Safer to close to reset state, unless we are in full screen mode.
-            // User compliant: "When I open B, only see B". 
-            // Better to respect user manual close, but if they click "Back" in browser, we should close.
+    let lastPreview = getPreviewKey();
+    function scheduleAutoLaunch(delay = 1000) {
+        if (autoLaunchTimer !== null || isRendering || !isMarkdownFile()) return;
+        if (dismissedPreview === getPreviewKey()) return;
+        autoLaunchTimer = setTimeout(() => {
+            autoLaunchTimer = null;
+            launchViewer(false);
+        }, delay);
+    }
 
-            // For now, keep existing logic: force re-eval.
-            if (isRendering) cleanupViewer();
-
-            setTimeout(() => launchViewer(false), 1000);
+    function checkPreview() {
+        const preview = getPreviewKey();
+        if (preview !== lastPreview) {
+            lastPreview = preview;
+            dismissedPreview = null;
+            clearTimeout(autoLaunchTimer);
+            autoLaunchTimer = null;
+            cleanupViewer();
         }
+        scheduleAutoLaunch();
+    }
+    const observer = new MutationObserver(checkPreview);
 
-        // Auto-launch check
-        const existing = document.getElementById('drive-md-viewer-frame');
-        if (!existing && isMarkdownFile()) {
-            if (!isRendering) setTimeout(() => launchViewer(false), 1000);
-        }
-    });
-
-    observer.observe(document.querySelector('title'), { childList: true });
+    const title = document.querySelector('title');
+    if (title) observer.observe(title, { childList: true });
     observer.observe(document.body, { childList: true, subtree: true });
-
-    // Initial check
-    setTimeout(() => launchViewer(false), 1500);
-
+    window.addEventListener('popstate', checkPreview);
+    scheduleAutoLaunch(1500);
 })();
