@@ -12,7 +12,7 @@ A powerful Chrome Extension that renders **Markdown** files directly within Goog
 -   **Dark Mode**: Built-in Dark/Light theme switcher with persistence.
 -   **Zoom Controls**: Zoom In/Out (50% - 250%) for better readability.
 -   **Code/Graph Toggle**: Switch Mermaid diagrams between rendered view and source code with a single click.
--   **Isolated Viewer**: Runs in a extension-origin iframe to avoid conflicts with Google Drive's scripts and CSP.
+-   **Isolated Viewer**: Runs in an extension-origin iframe to avoid conflicts with Google Drive's scripts and CSP.
 -   **Syntax Highlighting**: Clean styling for code blocks.
 
 ## Installation
@@ -39,12 +39,43 @@ A powerful Chrome Extension that renders **Markdown** files directly within Goog
 
 This extension uses a **Content Script + Iframe** architecture to ensure stability:
 
--   **Drive helpers (`src/drive.js`)**: Detect file IDs, locate preview text and sibling files, and validate downloads.
--   **Content controller (`src/content.js`)**: Own viewer lifecycle, request cancellation, automatic opening and message validation.
--   **Renderer (`src/render.js`)**: Parse and sanitize Markdown, preserve Mermaid source, and serialize diagram rendering.
--   **Viewer (`src/viewer.html`, `src/viewer.js`)**: Own toolbar controls, saved preferences and display state in an extension-origin iframe.
--   **Popup (`popup.js`)**: Request manual opening and inject the content entry points when necessary.
+-   **Drive helpers (`src/content/drive.js`)**: Detect file IDs, locate preview text and sibling files, and validate downloads.
+-   **Content controller (`src/content/index.js`)**: Own viewer lifecycle, request cancellation, automatic opening and message validation.
+-   **Renderer (`src/viewer/render.js`)**: Parse and sanitize Markdown, preserve Mermaid source, and serialize diagram rendering.
+-   **Viewer (`src/viewer/index.html`, `src/viewer/viewer.js`)**: Own toolbar controls, saved preferences and display state in an extension-origin iframe.
+-   **Popup (`src/popup/popup.js`)**: Request manual opening and inject the content entry points when necessary.
 -   **Communication**: Validate message source, origin and payload; send only to the intended origin.
+
+### Directory layout
+
+Source files are grouped by extension surface rather than file extension. A popup or viewer keeps its HTML, CSS and controller together; external runtime libraries and their licenses are kept outside application source.
+
+```text
+manifest.json
+src/
+  content/
+    drive.js
+    index.js
+  popup/
+    index.html
+    popup.css
+    popup.js
+  viewer/
+    index.html
+    viewer.css
+    viewer.js
+    render.js
+vendor/
+  dompurify/purify.min.js
+  marked/marked.min.js
+  mermaid/mermaid.min.js
+licenses/
+  DOMPurify.LICENSE
+scripts/
+  vendor.cjs
+  verify-extension.cjs
+tests/
+```
 
 ### Development and verification
 
@@ -53,9 +84,12 @@ The unpacked extension includes its runtime libraries; installing Node dependenc
 ```sh
 npm ci
 npm test
+npm run verify:extension
 ```
 
-After updating the pinned DOMPurify dependency, run `npm run vendor` and commit the generated `src/lib/purify.min.js` together with its license. Runtime libraries are bundled locally; no CDN is required.
+After updating the pinned DOMPurify dependency, run `npm run vendor` to refresh both `vendor/dompurify/purify.min.js` and `licenses/DOMPurify.LICENSE`, then commit both files. Runtime libraries are bundled locally; no CDN is required.
+
+The asset verifier checks the manifest, HTML references, viewer URL and manual content-script injection paths.
 
 Regression tests use jsdom, the bundled Marked and DOMPurify, simulated Drive responses, and a Mermaid stub. They cover unsafe content, message validation, close/reopen behavior, stale requests, download errors, and theme rendering order. Real Drive selectors, authenticated downloads, Chrome extension isolation and actual Mermaid SVG layout still need browser verification.
 

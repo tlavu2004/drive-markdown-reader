@@ -9,7 +9,7 @@ test('theme changes rebuild Mermaid from original source and preserve controls',
   const { dom, w, calls, content } = viewer();
   try {
     w.mermaid.run = async ({ nodes }) => nodes.forEach(node => { node.innerHTML = '<svg></svg>'; });
-    load(w, 'src/viewer.js');
+    load(w, 'src/viewer/viewer.js');
     const markdown = '```mermaid\ngraph TD; A-->B\n```';
     send(w, 'RENDER', markdown); await settle();
     assert.equal(calls.at(-1).theme, 'dark');
@@ -32,7 +32,7 @@ test('rapid theme changes serialize Mermaid work and render only latest pending 
       if (++runs === 1) await new Promise(resolve => { finish = resolve; });
       active--;
     };
-    load(w, 'src/viewer.js');
+    load(w, 'src/viewer/viewer.js');
     send(w, 'RENDER', '```mermaid\ngraph TD; Old-->A\n```'); await settle();
     const button = w.document.getElementById('drive-md-darkmode');
     button.click(); button.click(); button.click();

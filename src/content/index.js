@@ -101,7 +101,7 @@
     function createIframe() {
         const iframe = document.createElement('iframe');
         iframe.id = 'drive-md-viewer-frame';
-        iframe.src = chrome.runtime.getURL('src/viewer.html');
+        iframe.src = chrome.runtime.getURL('src/viewer/index.html');
         iframe.style.position = 'fixed';
         iframe.style.top = '0';
         iframe.style.left = '0';

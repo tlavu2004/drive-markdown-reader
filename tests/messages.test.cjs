@@ -4,7 +4,7 @@ const { viewer, load } = require('./helpers.cjs');
 test('viewer accepts only typed render messages from Drive parent', async () => {
   const { dom, w, content } = viewer();
   try {
-    load(w, 'src/viewer.js');
+    load(w, 'src/viewer/viewer.js');
     const send = (data, origin = 'https://drive.google.com', source = w.parent) =>
       w.dispatchEvent(new w.MessageEvent('message', { data, origin, source }));
     send(null); send({ action: 'RENDER', content: {} });
