@@ -31,7 +31,44 @@ export function isMarkdownFile() {
     return title.includes('.md') || title.includes('.markdown');
 }
 
+// Drive's native Markdown source view renders one pre/code pair per numbered line.
+const numberedPreviewSelector = 'div.ndfHFb-c4YZDc-QGztLd-fmcmS-n8fv3b';
+const numberedLineSelector = 'pre.ndfHFb-c4YZDc-QGztLd-fmcmS-RWgCYc-bN97Pc';
+
+function isVisiblePreview(element: HTMLElement): boolean {
+    if (element.closest('[hidden], [aria-hidden="true"]')) return false;
+    for (let node: HTMLElement | null = element; node; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
+    }
+    return true;
+}
+
+function readNumberedPreview(root: HTMLElement): string | null {
+    const children = [...root.children];
+    if (!children.length || children.length % 2 !== 0) return null;
+    const lines: string[] = [];
+    for (let index = 0; index < children.length; index += 2) {
+        const marker = children[index];
+        const pre = children[index + 1];
+        // Reject gaps/duplicates or a scrolled slice rather than silently truncating Markdown.
+        if (marker?.getAttribute('data-line-number') !== String(lines.length + 1)) return null;
+        if (!pre?.matches(numberedLineSelector)) return null;
+        const code = pre.firstElementChild;
+        if (pre.childElementCount !== 1 || !code?.matches('code.hljs')) return null;
+        lines.push(code.textContent ?? '');
+    }
+    return lines.join('\n');
+}
+
 export function scrapePreviewText() {
+    const numberedPreviews = [...document.querySelectorAll<HTMLElement>(numberedPreviewSelector)]
+        .filter(isVisiblePreview);
+    // The native viewer is not necessarily a role=dialog and folder URLs have no file ID.
+    if (numberedPreviews.length > 0) {
+        const root = numberedPreviews[0];
+        return numberedPreviews.length === 1 && root ? readNumberedPreview(root) : null;
+    }
     const dialogs = [...document.querySelectorAll<HTMLElement>('[role="dialog"]')]
         .filter(el => !el.closest('[hidden], [aria-hidden="true"]'));
     const roots = dialogs.length ? dialogs :
