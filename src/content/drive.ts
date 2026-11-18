@@ -38,10 +38,32 @@ const numberedLineSelector = 'pre.ndfHFb-c4YZDc-QGztLd-fmcmS-RWgCYc-bN97Pc';
 function isVisiblePreview(element: HTMLElement): boolean {
     if (element.closest('[hidden], [aria-hidden="true"]')) return false;
     for (let node: HTMLElement | null = element; node; node = node.parentElement) {
-        const style = getComputedStyle(node);
+        const style = node.ownerDocument.defaultView?.getComputedStyle(node);
+        if (!style) return false;
         if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') return false;
     }
     return true;
+}
+
+function previewDocuments(): Document[] {
+    const documents: Document[] = [];
+    const seen = new Set<Document>();
+    function visit(doc: Document) {
+        if (seen.has(doc)) return;
+        seen.add(doc);
+        documents.push(doc);
+        for (const frame of doc.querySelectorAll<HTMLIFrameElement>('iframe')) {
+            if (frame.id === 'drive-md-viewer-frame' || !isVisiblePreview(frame)) continue;
+            try {
+                // Cross-origin frames remain isolated; do not bypass the browser's origin checks.
+                if (frame.contentDocument) visit(frame.contentDocument);
+            } catch {
+                // A frame can navigate to another origin while the preview is being inspected.
+            }
+        }
+    }
+    visit(document);
+    return documents;
 }
 
 function readNumberedPreview(root: HTMLElement): string | null {
@@ -62,8 +84,9 @@ function readNumberedPreview(root: HTMLElement): string | null {
 }
 
 export function scrapePreviewText() {
-    const numberedPreviews = [...document.querySelectorAll<HTMLElement>(numberedPreviewSelector)]
-        .filter(isVisiblePreview);
+    const documents = previewDocuments();
+    const numberedPreviews = documents.flatMap(doc =>
+        [...doc.querySelectorAll<HTMLElement>(numberedPreviewSelector)].filter(isVisiblePreview));
     // The native viewer is not necessarily a role=dialog and folder URLs have no file ID.
     if (numberedPreviews.length > 0) {
         const root = numberedPreviews[0];

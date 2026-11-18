@@ -61,3 +61,40 @@ test('highlight spans are decoded as text and the captured gutter remains exclud
     assert.equal(app.w.DriveMarkdown.scrapePreviewText(), expected);
   } finally { app.dom.window.close(); }
 });
+test('reads a same-origin native preview iframe instead of only the outer Drive document', async () => {
+  const app = drive();
+  try {
+    showSource(app, '<iframe title="Drive preview"></iframe>');
+    const frame = app.w.document.querySelector('iframe');
+    frame.contentDocument.body.innerHTML = fixture;
+    assert.equal(app.w.DriveMarkdown.scrapePreviewText(), expected);
+    await app.settle(); app.manual(); await app.settle();
+    let message;
+    app.frame().contentWindow.postMessage = data => { message = data; };
+    app.send({ action: 'VIEWER_READY' });
+    assert.equal(message.action, 'RENDER'); assert.equal(message.content, expected);
+  } finally { app.dom.window.close(); }
+});
+test('reads nested preview frames while excluding hidden and extension frames', () => {
+  const app = drive();
+  try {
+    showSource(app, '<iframe hidden></iframe><iframe id="drive-md-viewer-frame"></iframe><iframe title="Preview"></iframe>');
+    const frames = app.w.document.querySelectorAll('iframe');
+    frames[0].contentDocument.body.innerHTML = fixture;
+    frames[1].contentDocument.body.innerHTML = fixture;
+    frames[2].contentDocument.body.innerHTML = '<iframe></iframe>';
+    frames[2].contentDocument.querySelector('iframe').contentDocument.body.innerHTML = fixture;
+    assert.equal(app.w.DriveMarkdown.scrapePreviewText(), expected);
+  } finally { app.dom.window.close(); }
+});
+test('does not read inaccessible frames or combine two visible preview files', () => {
+  const app = drive();
+  try {
+    showSource(app, '<iframe></iframe><iframe></iframe>');
+    const frames = app.w.document.querySelectorAll('iframe');
+    frames.forEach(frame => { frame.contentDocument.body.innerHTML = fixture; });
+    assert.equal(app.w.DriveMarkdown.scrapePreviewText(), null);
+    Object.defineProperty(frames[0], 'contentDocument', { get() { throw new app.w.DOMException('Blocked', 'SecurityError'); } });
+    assert.equal(app.w.DriveMarkdown.scrapePreviewText(), expected);
+  } finally { app.dom.window.close(); }
+});
