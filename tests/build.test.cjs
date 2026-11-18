@@ -58,6 +58,7 @@ test('built viewer loads its shared chunks and renders sanitized Markdown and co
     const themes = [];
     w.mermaid = { initialize: config => themes.push(config.theme), run: async () => {} };
     start();
+    w.dispatchEvent(new w.PageTransitionEvent('pagehide', { persisted: true }));
     w.dispatchEvent(new w.MessageEvent('message', {
       source: w.parent, origin: 'https://drive.google.com',
       data: { action: 'RENDER', content: '# Built viewer\n\n<img src=x onerror=alert(1)>\n\n```mermaid\ngraph TD; A-->B\n```' }
