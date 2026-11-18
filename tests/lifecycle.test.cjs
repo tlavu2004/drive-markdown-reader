@@ -17,3 +17,40 @@ test('closing survives DOM updates but manual reopen and another file still work
     assert.ok(app.timers.size <= 1);
   } finally { app.dom.window.close(); }
 });
+test('late fetch result cannot replace a newer manually opened file', async () => {
+  const app = drive();
+  try {
+    let finishA; let signalA; let calls = 0;
+    app.w.fetch = async (_url, options) => {
+      if (++calls === 1) {
+        signalA = options.signal;
+        return { ok: true, text: () => new Promise(resolve => { finishA = resolve; }) };
+      }
+      return { ok: true, text: async () => '# New content' };
+    };
+    await app.tick(); assert.equal(app.frame(), null);
+    app.manual(); await app.settle();
+    assert.equal(signalA.aborted, true);
+    const frame = app.frame(); assert.ok(frame);
+    finishA('# Stale content'); await app.settle();
+    assert.equal(app.frame(), frame);
+    let message;
+    frame.contentWindow.postMessage = data => { message = data; };
+    app.send({ action: 'VIEWER_READY' });
+    assert.equal(message.content, '# New content');
+  } finally { app.dom.window.close(); }
+});
+test('navigating away aborts loading and late response cannot reopen viewer', async () => {
+  const app = drive();
+  try {
+    let finish; let signal;
+    app.w.fetch = (_url, options) => { signal = options.signal; return new Promise(resolve => { finish = resolve; }); };
+    await app.tick();
+    app.w.history.pushState({}, '', '/drive/my-drive');
+    app.w.document.title = 'My Drive'; await app.settle();
+    assert.equal(signal.aborted, true);
+    finish({ ok: true, text: async () => '# Too late' });
+    await app.settle(); await app.tick();
+    assert.equal(app.frame(), null);
+  } finally { app.dom.window.close(); }
+});

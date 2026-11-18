@@ -15,6 +15,8 @@
 
     let dismissedPreview = null;
     let autoLaunchTimer = null;
+    let requestVersion = 0;
+    let activeRequest = null;
     let isRendering = false;
     let pendingContent = null;
     let currentRenderedId = null; // Track what we are currently showing
@@ -40,6 +42,11 @@
         if (!manualTrigger && !explicitId && !isMarkdownFile()) return;
 
         isRendering = true;
+        const version = ++requestVersion;
+        const preview = getPreviewKey();
+        const controller = new AbortController();
+        activeRequest = controller;
+        const isCurrent = () => version === requestVersion && !controller.signal.aborted && preview === getPreviewKey();
         let text = null;
         let fileId = explicitId || getFileIdFromUrl() || getFileIdFromDom();
 
@@ -47,11 +54,15 @@
             if (fileId) {
                 currentRenderedId = fileId; // Store for navigation
                 try {
-                    const resp = await fetch(`https://drive.google.com/uc?id=${fileId}&export=download`);
+                    const resp = await fetch(`https://drive.google.com/uc?id=${fileId}&export=download`, { signal: controller.signal });
                     if (resp.ok) text = await resp.text();
-                } catch (e) { console.warn("Fetch failed", e); }
+                } catch (e) {
+                    if (!isCurrent()) return;
+                    console.warn("Fetch failed", e);
+                }
             }
 
+            if (!isCurrent()) return;
             if (!text && !explicitId) text = scrapePreviewText(); // Only scrape if no explicit ID (fallback)
 
             if (!text) {
@@ -65,18 +76,21 @@
             createIframe();
 
         } catch (err) {
+            if (!isCurrent()) return;
             console.error("DriveMD Logic Error:", err);
             cleanupViewer();
         }
     }
 
     function cleanupViewer() {
+        requestVersion++;
+        activeRequest?.abort();
+        activeRequest = null;
         const iframe = document.getElementById('drive-md-viewer-frame');
         if (iframe) iframe.remove();
         isRendering = false;
         pendingContent = null;
-        // Do NOT clear currentRenderedId if simply closing, or maybe we should?
-        // If we close, we probably want to reset.
+        currentRenderedId = null;
     }
 
     function createIframe() {
