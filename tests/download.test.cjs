@@ -63,7 +63,7 @@ test('close while loading aborts request and an empty file is sent to viewer', a
 test('viewer presents download errors as text', () => {
   const { dom, w, content } = viewer();
   try {
-    load(w, 'src/viewer/viewer.js');
+    load(w, 'src/viewer/viewer.ts');
     w.dispatchEvent(new w.MessageEvent('message', {
       source: w.parent, origin: 'https://drive.google.com',
       data: { action: 'RENDER_ERROR', content: '<img onerror=alert(1)>' }

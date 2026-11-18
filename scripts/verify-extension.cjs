@@ -1,51 +1,56 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const vm = require('node:vm');
 const { JSDOM } = require('jsdom');
-const root = path.resolve(__dirname, '..');
+const { buildSync } = require('esbuild');
+const project = path.resolve(__dirname, '..');
+const root = path.join(project, 'dist');
 
 function extensionFile(reference, base = root) {
-  const resolved = path.resolve(base, reference);
-  assert.ok(resolved.startsWith(root + path.sep), `Asset outside extension: ${reference}`);
-  assert.ok(fs.statSync(resolved).isFile(), `Missing extension asset: ${reference}`);
+  const resolved = path.resolve(base, reference.startsWith('/') ? path.join(root, reference.slice(1)) : reference);
+  assert.ok(resolved.startsWith(root + path.sep), `Asset outside dist: ${reference}`);
+  assert.ok(fs.statSync(resolved).isFile(), `Missing built asset: ${reference}`);
   return resolved;
 }
-
-const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
-const accessible = new Set(manifest.web_accessible_resources.flatMap(group => group.resources));
-const contentFiles = manifest.content_scripts.flatMap(entry => [...entry.js, ...(entry.css || [])]);
-for (const reference of [...contentFiles, ...accessible]) extensionFile(reference);
-
-function verifyHtml(file, requireAccessible = false) {
+const manifest = JSON.parse(fs.readFileSync(extensionFile('manifest.json'), 'utf8'));
+assert.equal(manifest.manifest_version, 3);
+const files = fs.readdirSync(root, { recursive: true, withFileTypes: true })
+  .filter(entry => entry.isFile()).map(entry => path.relative(root, path.join(entry.parentPath, entry.name)).replaceAll('\\', '/'));
+const accessible = manifest.web_accessible_resources.flatMap(group => group.resources);
+function matches(pattern, file) {
+  return new RegExp('^' + pattern.split('*').map(part => part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$').test(file);
+}
+function isAccessible(file) { return accessible.some(pattern => matches(pattern, file)); }
+for (const pattern of accessible) {
+  assert.ok(files.some(file => matches(pattern, file)), `Resource pattern matches no built files: ${pattern}`);
+}
+for (const entry of manifest.content_scripts) {
+  for (const reference of [...entry.js, ...(entry.css || [])]) extensionFile(reference);
+  for (const reference of entry.js) {
+    new vm.Script(fs.readFileSync(extensionFile(reference), 'utf8'), { filename: reference });
+  }
+}
+function verifyHtml(reference, viewer = false) {
+  const file = extensionFile(reference);
   const dom = new JSDOM(fs.readFileSync(file, 'utf8'));
   try {
     for (const element of dom.window.document.querySelectorAll('script[src], link[href]')) {
-      const reference = element.getAttribute('src') || element.getAttribute('href');
-      const asset = extensionFile(reference, path.dirname(file));
-      if (requireAccessible) {
-        const relative = path.relative(root, asset).split(path.sep).join('/');
-        assert.ok(accessible.has(relative), `Viewer asset missing from manifest resources: ${relative}`);
-      }
+      const ref = element.getAttribute('src') || element.getAttribute('href');
+      assert.ok(!ref.endsWith('.ts'), `HTML references unbuilt TypeScript: ${ref}`);
+      const asset = extensionFile(ref, path.dirname(file));
+      if (viewer) assert.ok(isAccessible(path.relative(root, asset).replaceAll('\\', '/')), `Viewer asset not web accessible: ${ref}`);
     }
   } finally { dom.window.close(); }
 }
-
-verifyHtml(extensionFile(manifest.action.default_popup));
-for (const reference of accessible) {
-  if (reference.endsWith('.html')) verifyHtml(extensionFile(reference), true);
+verifyHtml(manifest.action.default_popup);
+verifyHtml('src/viewer/index.html', true);
+for (const file of files.filter(file => file.startsWith('assets/') && file.endsWith('.js'))) {
+  // Resolve and parse all emitted JS imports, including shared chunks.
+  buildSync({ entryPoints: [extensionFile(file)], bundle: true, write: false, platform: 'browser', logLevel: 'silent' });
 }
-
-const sourceFiles = fs.readdirSync(path.join(root, 'src'), { recursive: true }).filter(file => file.endsWith('.js'));
-for (const source of sourceFiles) {
-  const code = fs.readFileSync(path.join(root, 'src', source), 'utf8');
-  for (const [, reference] of code.matchAll(/chrome\.runtime\.getURL\('([^']+)'\)/g)) {
-    extensionFile(reference);
-    assert.ok(accessible.has(reference), `Viewer entry missing from manifest resources: ${reference}`);
-  }
-  for (const [, injected] of code.matchAll(/files:\s*\[([^\]]+)\]/g)) {
-    const files = [...injected.matchAll(/'([^']+)'/g)].map(match => match[1]);
-    for (const file of files) extensionFile(file);
-    assert.deepEqual(files, manifest.content_scripts[0].js, 'Popup injection must preserve content-script dependency order');
-  }
+for (const file of files) assert.ok(!/\.(?:ts|cjs|mjs)$/.test(file), `Development source leaked into package: ${file}`);
+for (const file of files.filter(file => file.startsWith('vendor/') || file.startsWith('licenses/'))) {
+  assert.deepEqual(fs.readFileSync(extensionFile(file)), fs.readFileSync(path.join(project, file)), `Bundled library or license changed: ${file}`);
 }
-console.log('Verified manifest assets, popup/viewer HTML, viewer URL and manual injection paths.');
+console.log('Verified dist manifest, classic content scripts, HTML assets, shared chunks and bundled libraries/licenses.');

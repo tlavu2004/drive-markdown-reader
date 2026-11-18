@@ -1,30 +1,34 @@
+import { createMarkdownRenderer } from './render';
+import { isContentMessage, errorMessage } from '../shared/messages';
+import { requireElement } from '../shared/dom';
+
 const driveOrigin = 'https://drive.google.com';
 
 // State
 let isDarkMode = true;
 let isMermaidSource = false;
 let currentZoom = 1.0;
-let currentMarkdown = null;
+let currentMarkdown: string | null = null;
 let renderVersion = 0;
 
 // UI Elements
-const contentDiv = document.getElementById('content');
-const btnDark = document.getElementById('drive-md-darkmode');
-const btnMermaid = document.getElementById('drive-md-mermaid-toggle');
-const btnClose = document.getElementById('drive-md-close');
-const btnZoomIn = document.getElementById('drive-md-zoom-in');
-const btnZoomOut = document.getElementById('drive-md-zoom-out');
-const btnZoomReset = document.getElementById('drive-md-zoom-reset');
-const btnPrev = document.getElementById('drive-md-nav-prev');
-const btnNext = document.getElementById('drive-md-nav-next');
+const contentDiv = requireElement('content');
+const btnDark = requireElement('drive-md-darkmode');
+const btnMermaid = requireElement('drive-md-mermaid-toggle');
+const btnClose = requireElement('drive-md-close');
+const btnZoomIn = requireElement('drive-md-zoom-in');
+const btnZoomOut = requireElement('drive-md-zoom-out');
+const btnZoomReset = requireElement('drive-md-zoom-reset');
+const btnPrev = requireElement('drive-md-nav-prev');
+const btnNext = requireElement('drive-md-nav-next');
 
-const renderContent = window.createMarkdownRenderer(contentDiv, () => isDarkMode);
+const renderContent = createMarkdownRenderer(contentDiv, () => isDarkMode);
 
 function renderCurrentMarkdown() {
   if (currentMarkdown === null) return;
   const version = ++renderVersion;
   renderContent(currentMarkdown).catch(error => {
-    if (version === renderVersion) contentDiv.textContent = `Unable to render Markdown: ${error.message}`;
+    if (version === renderVersion) contentDiv.textContent = `Unable to render Markdown: ${errorMessage(error)}`;
   });
 }
 
@@ -34,7 +38,7 @@ function updateTheme() {
   else document.body.classList.remove('dark-mode');
 
   btnDark.textContent = isDarkMode ? '🌙 Dark' : '☀️ Light';
-  localStorage.setItem('drive-md-dark-mode', isDarkMode);
+  localStorage.setItem('drive-md-dark-mode', String(isDarkMode));
 }
 
 function updateMermaidView() {
@@ -42,7 +46,7 @@ function updateMermaidView() {
   else document.body.classList.remove('show-mermaid-source');
 
   btnMermaid.textContent = isMermaidSource ? '📝 Code' : '📊 Graph';
-  localStorage.setItem('drive-md-mermaid-source', isMermaidSource);
+  localStorage.setItem('drive-md-mermaid-source', String(isMermaidSource));
 }
 
 function updateZoom() {
@@ -53,7 +57,7 @@ function updateZoom() {
 
   contentDiv.style.transform = `scale(${currentZoom})`;
   btnZoomReset.textContent = `${Math.round(currentZoom * 100)}%`;
-  localStorage.setItem('drive-md-zoom', currentZoom);
+  localStorage.setItem('drive-md-zoom', String(currentZoom));
 }
 
 // Init Preferences
@@ -109,9 +113,9 @@ btnClose.addEventListener('click', () => {
 });
 
 // Message Receiver
-window.addEventListener('message', (event) => {
+window.addEventListener('message', (event: MessageEvent<unknown>) => {
   if (event.source !== window.parent || event.origin !== driveOrigin) return;
-  if (!event.data || typeof event.data !== 'object') return;
+  if (!isContentMessage(event.data)) return;
   if (event.data.action === 'RENDER_ERROR' && typeof event.data.content === 'string') {
     currentMarkdown = null;
     renderVersion++;
