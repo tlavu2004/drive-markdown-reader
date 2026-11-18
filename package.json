@@ -1,0 +1,11 @@
+{
+  "name": "drive-markdown-reader",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "vendor": "node -e \"require('node:fs').copyFileSync('node_modules/dompurify/dist/purify.min.js', 'src/lib/purify.min.js')\""
+  },
+  "dependencies": { "dompurify": "3.4.18" },
+  "devDependencies": { "jsdom": "31.0.1" }
+}

@@ -36,7 +36,8 @@
         "src/styles.css",
         "src/viewer.html",
         "src/viewer.js",
-        "src/render.js"
+        "src/render.js",
+        "src/lib/purify.min.js"
       ],
       "matches": [
         "https://drive.google.com/*"

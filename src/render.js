@@ -2,14 +2,6 @@
 window.createMarkdownRenderer = function (contentDiv, getDarkMode) {
 /* viewer.js */
 
-// Utils
-const unescapeHtml = (str) =>
-  str.replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-
 // Setup Marked
 const renderer = new marked.Renderer();
 const originalCodeRenderer = renderer.code.bind(renderer);
@@ -40,12 +32,18 @@ renderer.code = (code, language) => {
     (!lang && /^\s*(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitGraph|journey|mindmap|timeline)/.test(codeStr));
 
   if (isMermaid) {
-    const safeCode = unescapeHtml(codeStr);
-    return `
-        <div class="mermaid-block">
-            <div class="mermaid-graph mermaid">${safeCode}</div>
-            <pre class="mermaid-source"><code>${safeCode}</code></pre>
-        </div>`;
+    const block = document.createElement('div');
+    block.className = 'mermaid-block';
+    const graph = document.createElement('div');
+    graph.className = 'mermaid-graph mermaid';
+    graph.textContent = codeStr;
+    const source = document.createElement('pre');
+    source.className = 'mermaid-source';
+    const codeElement = document.createElement('code');
+    codeElement.textContent = codeStr;
+    source.appendChild(codeElement);
+    block.append(graph, source);
+    return block.outerHTML;
   }
 
   // Pass back to original
@@ -59,9 +57,13 @@ marked.use({ renderer });
 
 async function renderContent(markdownText) {
   console.log("Viewer: Received content length:", markdownText.length);
-  if (!markdownText) return;
+  if (typeof markdownText !== "string") return;
 
-  contentDiv.innerHTML = marked.parse(markdownText);
+  contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(markdownText), {
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ['style', 'form', 'input', 'button'],
+    SANITIZE_NAMED_PROPS: true
+  });
 
   // Process Mermaid
   const mermaidDivs = contentDiv.querySelectorAll('.mermaid-graph');
@@ -76,7 +78,7 @@ async function renderContent(markdownText) {
 
     const theme = getDarkMode() ? 'dark' : 'default';
     console.log("Viewer: Initializing Mermaid with theme:", theme);
-    mermaid.initialize({ startOnLoad: false, theme: theme, securityLevel: 'loose' });
+    mermaid.initialize({ startOnLoad: false, theme: theme, securityLevel: 'strict' });
 
     try {
       console.log("Viewer: Running mermaid.run...");
@@ -85,9 +87,9 @@ async function renderContent(markdownText) {
     } catch (e) {
       console.error("Viewer: Mermaid Error:", e);
       mermaidDivs.forEach(d => {
-        d.innerHTML = `<div style="color:red; border:1px solid red; padding:5px;">
-                    Mermaid Error: ${e.message}
-                </div><pre>${d.innerText}</pre>`;
+        const error = document.createElement('pre');
+        error.textContent = `Mermaid Error: ${e.message}\n${d.textContent}`;
+        d.replaceChildren(error);
       });
     }
   }
