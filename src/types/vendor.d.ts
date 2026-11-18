@@ -1,7 +1,7 @@
 export {};
 declare global {
   interface Window { hasDriveMarkdownReader?: boolean }
-  const marked: typeof import('marked').marked;
+  const marked: typeof import('marked');
   const DOMPurify: typeof import('dompurify').default;
   // Only the API used from the existing vendored Mermaid bundle is declared here.
   const mermaid: {

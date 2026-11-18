@@ -5,7 +5,10 @@ function normalizeZoom(value: number) {
 }
 
 export function usePreferences() {
-  const [dark, setDark] = useState(() => localStorage.getItem('drive-md-dark-mode') !== 'false');
+  const [dark, setDark] = useState(() => {
+    const stored = localStorage.getItem('drive-md-dark-mode');
+    return stored === null || stored === 'true';
+  });
   const [source, setSource] = useState(() => localStorage.getItem('drive-md-mermaid-source') === 'true');
   const [zoom, setZoom] = useState(() => {
     const value = Number.parseFloat(localStorage.getItem('drive-md-zoom') || '1');

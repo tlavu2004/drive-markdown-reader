@@ -1,3 +1,5 @@
 import { mountViewer } from './mount';
 const root = mountViewer();
-window.addEventListener('pagehide', () => root.unmount(), { once: true });
+window.addEventListener('pagehide', event => {
+  if (!event.persisted) root.unmount();
+});

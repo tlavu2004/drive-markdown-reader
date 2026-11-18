@@ -24,3 +24,14 @@ test('Mermaid error details are displayed as text', async () => {
     assert.match(content.textContent, /<img src=x/);
   } finally { dom.window.close(); }
 });
+test('renderer customization does not change another consumer of the global Markdown parser', async () => {
+  const { dom, w, content } = viewer();
+  try {
+    const markdown = '```mermaid\ngraph TD; A-->B\n```';
+    const render = w.createMarkdownRenderer(content, () => false);
+    await render(markdown);
+    assert.ok(content.querySelector('.mermaid-graph'));
+    assert.match(w.marked.parse(markdown), /<pre><code class="language-mermaid">/);
+    assert.doesNotMatch(w.marked.parse(markdown), /mermaid-graph/);
+  } finally { dom.window.close(); }
+});

@@ -2,9 +2,9 @@ import { useLayoutEffect, useRef } from 'react';
 import { createMarkdownRenderer } from '../render';
 import { errorMessage } from '../../shared/messages';
 import type { ViewerState } from '../hooks/useViewerMessages';
+import { ViewerStatus } from './ViewerStatus';
 
-type Props = { state: ViewerState; dark: boolean; zoom: number };
-export function MarkdownContent({ state, dark, zoom }: Props) {
+function RenderedMarkdown({ markdown, dark }: { markdown: string; dark: boolean }) {
   const host = useRef<HTMLDivElement>(null);
   const theme = useRef(dark);
   theme.current = dark;
@@ -21,16 +21,20 @@ export function MarkdownContent({ state, dark, zoom }: Props) {
     const render = renderer.current;
     if (!element || !render) return;
     let active = true;
-    if (state.status === 'ready') {
-      render(state.markdown).catch(error => {
-        if (active) element.textContent = `Unable to render Markdown: ${errorMessage(error)}`;
-      });
-    } else {
-      render.cancel();
-      element.textContent = state.status === 'loading' ? 'Loading Markdown…' : `Unable to load Markdown: ${state.message}`;
-    }
+    render(markdown).catch(error => {
+      if (active) element.textContent = `Unable to render Markdown: ${errorMessage(error)}`;
+    });
     return () => { active = false; render.cancel(); };
-  }, [state, dark]);
-  // React owns this element; the sanitized Markdown/Mermaid renderer owns its children.
-  return <div ref={host} id="content" className="drive-md-reader-content" style={{ transform: `scale(${zoom})` }} />;
+  }, [markdown, dark]);
+  // The renderer alone owns this element's children, including Mermaid's SVG output.
+  return <div ref={host} />;
+}
+
+type Props = { state: ViewerState; dark: boolean; zoom: number };
+export function MarkdownContent({ state, dark, zoom }: Props) {
+  return <div id="content" className="drive-md-reader-content" style={{ transform: `scale(${zoom})` }}>
+    {state.status === 'ready'
+      ? <RenderedMarkdown markdown={state.markdown} dark={dark} />
+      : <ViewerStatus state={state} />}
+  </div>;
 }
