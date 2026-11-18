@@ -1,3 +1,5 @@
+const driveOrigin = 'https://drive.google.com';
+
 // State
 let isDarkMode = true;
 let isMermaidSource = false;
@@ -84,23 +86,25 @@ btnZoomReset.addEventListener('click', () => {
 });
 
 btnPrev.addEventListener('click', () => {
-  window.parent.postMessage({ action: 'NAVIGATE', direction: -1 }, '*');
+  window.parent.postMessage({ action: 'NAVIGATE', direction: -1 }, driveOrigin);
 });
 
 btnNext.addEventListener('click', () => {
-  window.parent.postMessage({ action: 'NAVIGATE', direction: 1 }, '*');
+  window.parent.postMessage({ action: 'NAVIGATE', direction: 1 }, driveOrigin);
 });
 
 btnClose.addEventListener('click', () => {
-  window.parent.postMessage({ action: 'CLOSE_VIEWER' }, '*');
+  window.parent.postMessage({ action: 'CLOSE_VIEWER' }, driveOrigin);
 });
 
 // Message Receiver
 window.addEventListener('message', (event) => {
-  if (event.data.action === 'RENDER') {
+  if (event.source !== window.parent || event.origin !== driveOrigin) return;
+  if (!event.data || typeof event.data !== 'object') return;
+  if (event.data.action === 'RENDER' && typeof event.data.content === 'string') {
     renderContent(event.data.content);
   }
 });
 
 // Signal ready
-window.parent.postMessage({ action: 'VIEWER_READY' }, '*');
+window.parent.postMessage({ action: 'VIEWER_READY' }, driveOrigin);

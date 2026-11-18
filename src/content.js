@@ -5,6 +5,8 @@
 
     const { getFileIdFromUrl, getFileIdFromDom, isMarkdownFile, scrapePreviewText, findSiblingId } = window.DriveMarkdown;
 
+    const viewerOrigin = chrome.runtime.getURL('').replace(/\/$/, '');
+
     // --- Main Logic ---
 
     let isRendering = false;
@@ -87,13 +89,19 @@
     // --- Listeners ---
 
     window.addEventListener('message', (event) => {
+        const frame = document.getElementById('drive-md-viewer-frame');
+        const data = event.data;
+        if (!frame || event.source !== frame.contentWindow || event.origin !== viewerOrigin) return;
+        if (!data || typeof data !== 'object') return;
+        if (!['VIEWER_READY', 'CLOSE_VIEWER', 'NAVIGATE'].includes(data.action)) return;
+        if (data.action === 'NAVIGATE' && data.direction !== -1 && data.direction !== 1) return;
         if (event.data.action === 'VIEWER_READY') {
             const iframe = document.getElementById('drive-md-viewer-frame');
             if (iframe && pendingContent) {
                 iframe.contentWindow.postMessage({
                     action: 'RENDER',
                     content: pendingContent
-                }, '*');
+                }, viewerOrigin);
                 pendingContent = null;
             }
         }
@@ -116,7 +124,7 @@
     });
 
     chrome.runtime.onMessage.addListener((req, sender, sendResp) => {
-        if (req.action === "RENDER_NOW") {
+        if (req && req.action === "RENDER_NOW") {
             launchViewer(true);
             sendResp({ success: true });
         }
