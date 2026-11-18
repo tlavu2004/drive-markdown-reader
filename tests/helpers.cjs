@@ -2,7 +2,21 @@ const { JSDOM } = require('jsdom');
 const fs = require('node:fs');
 const path = require('node:path');
 const root = path.resolve(__dirname, '..');
-function load(window, file) { window.eval(fs.readFileSync(path.join(root, file), 'utf8')); }
+const { buildSync } = require('esbuild');
+const compiled = new Map();
+function load(window, file) {
+  if (file.endsWith('.ts')) {
+    if (!compiled.has(file)) compiled.set(file, buildSync({
+      entryPoints: [path.join(root, file)], bundle: true, write: false,
+      format: 'iife', globalName: '__testModule', target: 'chrome120'
+    }).outputFiles[0].text);
+    window.eval(compiled.get(file) + '\nwindow.__testModule = __testModule;');
+    if (file.endsWith('/drive.ts')) window.DriveMarkdown = window.__testModule;
+    if (file.endsWith('/render.ts')) window.createMarkdownRenderer = window.__testModule.createMarkdownRenderer;
+    return;
+  }
+  window.eval(fs.readFileSync(path.join(root, file), 'utf8'));
+}
 function viewer() {
   const dom = new JSDOM(fs.readFileSync(path.join(root, 'src/viewer/index.html'), 'utf8'), {
     url: 'https://extension.test/src/viewer/index.html', runScripts: 'outside-only'
@@ -10,7 +24,7 @@ function viewer() {
   const w = dom.window;
   const calls = [];
   w.mermaid = { initialize: config => calls.push(config), run: async () => {} };
-  for (const file of ['vendor/dompurify/purify.min.js', 'vendor/marked/marked.min.js', 'src/viewer/render.js']) load(w, file);
+  for (const file of ['vendor/dompurify/purify.min.js', 'vendor/marked/marked.min.js', 'src/viewer/render.ts']) load(w, file);
   return { dom, w, calls, content: w.document.getElementById('content') };
 }
 module.exports = { load, viewer };
@@ -28,7 +42,7 @@ function drive() {
     onMessage: { addListener: callback => { runtimeListener = callback; } }
   } };
   w.fetch = async () => ({ ok: true, text: async () => '# File A' });
-  load(w, 'src/content/drive.js'); load(w, 'src/content/index.js');
+  load(w, 'src/content/drive.ts'); load(w, 'dist/content.js');
   const settle = async () => { for (let i = 0; i < 12; i++) await Promise.resolve(); };
   const tick = async () => {
     const pending = [...timers.values()]; timers.clear();

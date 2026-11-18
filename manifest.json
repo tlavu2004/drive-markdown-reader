@@ -17,13 +17,10 @@
         "https://drive.google.com/*"
       ],
       "js": [
-        "vendor/marked/marked.min.js",
-        "vendor/mermaid/mermaid.min.js",
-        "src/content/drive.js",
-        "src/content/index.js"
+        "content.js"
       ],
       "css": [
-        "src/viewer/viewer.css"
+        "content.css"
       ],
       "run_at": "document_idle"
     }
@@ -31,12 +28,10 @@
   "web_accessible_resources": [
     {
       "resources": [
+        "src/viewer/index.html",
+        "assets/*",
         "vendor/marked/marked.min.js",
         "vendor/mermaid/mermaid.min.js",
-        "src/viewer/viewer.css",
-        "src/viewer/index.html",
-        "src/viewer/viewer.js",
-        "src/viewer/render.js",
         "vendor/dompurify/purify.min.js"
       ],
       "matches": [

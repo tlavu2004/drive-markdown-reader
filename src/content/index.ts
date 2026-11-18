@@ -1,9 +1,9 @@
-/* content.js */
+import { getFileIdFromUrl, getFileIdFromDom, isMarkdownFile, scrapePreviewText, fetchMarkdown, findSiblingId } from './drive';
+import { isViewerMessage, isRenderRequest, errorMessage, type ContentMessage, type RenderResponse } from '../shared/messages';
+import { VIEWER_PATH } from '../shared/paths';
 (function () {
     if (window.hasDriveMarkdownReader) return;
     window.hasDriveMarkdownReader = true;
-
-    const { getFileIdFromUrl, getFileIdFromDom, isMarkdownFile, scrapePreviewText, fetchMarkdown, findSiblingId } = window.DriveMarkdown;
 
     const viewerOrigin = chrome.runtime.getURL('').replace(/\/$/, '');
 
@@ -13,16 +13,16 @@
         return `${location.href}|${document.title}|${getFileIdFromUrl() || getFileIdFromDom() || ''}`;
     }
 
-    let dismissedPreview = null;
-    let autoLaunchTimer = null;
+    let dismissedPreview: string | null = null;
+    let autoLaunchTimer: number | undefined;
     let requestVersion = 0;
-    let activeRequest = null;
+    let activeRequest: AbortController | null = null;
     let isRendering = false;
-    let pendingMessage = null;
+    let pendingMessage: ContentMessage | null = null;
     let viewerReady = false;
-    let currentRenderedId = null; // Track what we are currently showing
+    let currentRenderedId: string | null = null; // Track what we are currently showing
 
-    async function launchViewer(manualTrigger = false, explicitId = null) {
+    async function launchViewer(manualTrigger = false, explicitId: string | null = null): Promise<RenderResponse | undefined> {
         if (manualTrigger) dismissedPreview = null;
         if (!manualTrigger && dismissedPreview === getPreviewKey()) return;
 
@@ -33,7 +33,7 @@
             return; // Already active (auto-trigger case)
         }
 
-        const existing = document.getElementById('drive-md-viewer-frame');
+        const existing = document.querySelector<HTMLIFrameElement>('#drive-md-viewer-frame');
         if (existing) {
             if (manualTrigger) existing.remove();
             else return;
@@ -48,8 +48,8 @@
         activeRequest = controller;
         const isCurrent = () => version === requestVersion && !controller.signal.aborted && preview === getPreviewKey();
         createIframe();
-        let text = null;
-        let loadError = null;
+        let text: string | null = null;
+        let loadError: unknown = null;
         const fileId = explicitId || getFileIdFromUrl() || getFileIdFromDom();
 
         try {
@@ -72,9 +72,9 @@
 
         } catch (err) {
             if (!isCurrent()) return;
-            pendingMessage = { action: 'RENDER_ERROR', content: err.message || 'Unable to load Markdown.' };
+            pendingMessage = { action: 'RENDER_ERROR', content: errorMessage(err, 'Unable to load Markdown.') };
             flushViewerMessage();
-            return { success: false, reason: pendingMessage?.content || err.message };
+            return { success: false, reason: errorMessage(err, 'Unable to load Markdown.') };
         }
     }
 
@@ -82,7 +82,7 @@
         requestVersion++;
         activeRequest?.abort();
         activeRequest = null;
-        const iframe = document.getElementById('drive-md-viewer-frame');
+        const iframe = document.querySelector<HTMLIFrameElement>('#drive-md-viewer-frame');
         if (iframe) iframe.remove();
         isRendering = false;
         pendingMessage = null;
@@ -91,9 +91,9 @@
     }
 
     function flushViewerMessage() {
-        const frame = document.getElementById('drive-md-viewer-frame');
+        const frame = document.querySelector<HTMLIFrameElement>('#drive-md-viewer-frame');
         if (frame && viewerReady && pendingMessage) {
-            frame.contentWindow.postMessage(pendingMessage, viewerOrigin);
+            frame.contentWindow?.postMessage(pendingMessage, viewerOrigin);
             pendingMessage = null;
         }
     }
@@ -101,7 +101,7 @@
     function createIframe() {
         const iframe = document.createElement('iframe');
         iframe.id = 'drive-md-viewer-frame';
-        iframe.src = chrome.runtime.getURL('src/viewer/index.html');
+        iframe.src = chrome.runtime.getURL(VIEWER_PATH);
         iframe.style.position = 'fixed';
         iframe.style.top = '0';
         iframe.style.left = '0';
@@ -116,13 +116,11 @@
 
     // --- Listeners ---
 
-    window.addEventListener('message', (event) => {
-        const frame = document.getElementById('drive-md-viewer-frame');
+    window.addEventListener('message', (event: MessageEvent<unknown>) => {
+        const frame = document.querySelector<HTMLIFrameElement>('#drive-md-viewer-frame');
         const data = event.data;
         if (!frame || event.source !== frame.contentWindow || event.origin !== viewerOrigin) return;
-        if (!data || typeof data !== 'object') return;
-        if (!['VIEWER_READY', 'CLOSE_VIEWER', 'NAVIGATE'].includes(data.action)) return;
-        if (data.action === 'NAVIGATE' && data.direction !== -1 && data.direction !== 1) return;
+        if (!isViewerMessage(data)) return;
         if (data.action === 'VIEWER_READY') {
             viewerReady = true;
             flushViewerMessage();
@@ -130,8 +128,8 @@
 
         if (data.action === 'CLOSE_VIEWER') {
             dismissedPreview = getPreviewKey();
-            clearTimeout(autoLaunchTimer);
-            autoLaunchTimer = null;
+            window.clearTimeout(autoLaunchTimer);
+            autoLaunchTimer = undefined;
             cleanupViewer();
         }
 
@@ -148,8 +146,8 @@
         }
     });
 
-    chrome.runtime.onMessage.addListener((req, sender, sendResp) => {
-        if (req && req.action === "RENDER_NOW") {
+    chrome.runtime.onMessage.addListener((req: unknown, _sender, sendResp) => {
+        if (isRenderRequest(req)) {
             launchViewer(true).then(result => sendResp(result || { success: false, reason: 'Loading was cancelled.' }));
             return true;
         }
@@ -157,10 +155,10 @@
 
     let lastPreview = getPreviewKey();
     function scheduleAutoLaunch(delay = 1000) {
-        if (autoLaunchTimer !== null || isRendering || !isMarkdownFile()) return;
+        if (autoLaunchTimer !== undefined || isRendering || !isMarkdownFile()) return;
         if (dismissedPreview === getPreviewKey()) return;
-        autoLaunchTimer = setTimeout(() => {
-            autoLaunchTimer = null;
+        autoLaunchTimer = window.setTimeout(() => {
+            autoLaunchTimer = undefined;
             launchViewer(false);
         }, delay);
     }
@@ -170,8 +168,8 @@
         if (preview !== lastPreview) {
             lastPreview = preview;
             dismissedPreview = null;
-            clearTimeout(autoLaunchTimer);
-            autoLaunchTimer = null;
+            window.clearTimeout(autoLaunchTimer);
+            autoLaunchTimer = undefined;
             cleanupViewer();
         }
         scheduleAutoLaunch();

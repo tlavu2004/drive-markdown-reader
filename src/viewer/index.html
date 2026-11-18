@@ -6,9 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Markdown Preview</title>
   <link rel="stylesheet" href="viewer.css">
-  <script src="../../vendor/dompurify/purify.min.js"></script>
-  <script src="../../vendor/marked/marked.min.js"></script>
-  <script src="../../vendor/mermaid/mermaid.min.js"></script>
 </head>
 
 <body>
@@ -41,8 +38,7 @@
   <div id="content" class="drive-md-reader-content">
     Loading Markdown…
   </div>
-  <script src="render.js"></script>
-  <script src="viewer.js"></script>
+  <script type="module" src="viewer.ts"></script>
 </body>
 
 </html>

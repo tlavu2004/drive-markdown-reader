@@ -1,20 +1,26 @@
-document.getElementById('btn-render').addEventListener('click', async () => {
-  const status = document.getElementById('status');
+import { requireElement } from '../shared/dom';
+import { errorMessage, isRenderResponse } from '../shared/messages';
+import { CONTENT_SCRIPT_FILES } from '../shared/paths';
+
+requireElement('btn-render').addEventListener('click', async () => {
+  const status = requireElement('status');
   status.textContent = "Connecting...";
   status.style.color = "#666";
 
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 
-    if (!tab || !tab.url || !tab.url.includes('drive.google.com')) {
+    if (!tab || tab.id === undefined || !tab.url || !tab.url.includes('drive.google.com')) {
       status.textContent = "Not Google Drive (or permission denied)!";
       status.style.color = "red";
       return;
     }
 
+    const tabId = tab.id;
+
     // Helper to send message
     const sendMessage = async () => {
-      return await chrome.tabs.sendMessage(tab.id, { action: "RENDER_NOW" });
+      return await chrome.tabs.sendMessage(tabId, { action: "RENDER_NOW" });
     };
 
     try {
@@ -28,8 +34,8 @@ document.getElementById('btn-render').addEventListener('click', async () => {
       // Requires "scripting" permission
       try {
         await chrome.scripting.executeScript({
-          target: { tabId: tab.id },
-          files: ['vendor/marked/marked.min.js', 'vendor/mermaid/mermaid.min.js', 'src/content/drive.js', 'src/content/index.js']
+          target: { tabId },
+          files: [...CONTENT_SCRIPT_FILES]
         });
 
         // Wait a tiny bit for script to init
@@ -50,16 +56,16 @@ document.getElementById('btn-render').addEventListener('click', async () => {
     }
   } catch (err) {
     console.error(err);
-    status.textContent = "Error: " + err.message;
+    status.textContent = "Error: " + errorMessage(err);
     status.style.color = "red";
   }
 
-  function handleResponse(response) {
-    if (response && response.success) {
+  function handleResponse(response: unknown) {
+    if (isRenderResponse(response) && response.success) {
       status.textContent = "Render triggered!";
       status.style.color = "green";
     } else {
-      status.textContent = response?.reason || "Failed.";
+      status.textContent = (isRenderResponse(response) && !response.success ? response.reason : "Failed.");
       status.style.color = "orange";
     }
   }
