@@ -8,7 +8,7 @@
     "scripting"
   ],
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "src/popup/index.html",
     "default_title": "Render Markdown"
   },
   "content_scripts": [
@@ -17,12 +17,13 @@
         "https://drive.google.com/*"
       ],
       "js": [
-        "src/lib/marked.min.js",
-        "src/lib/mermaid.min.js",
-        "src/content.js"
+        "vendor/marked/marked.min.js",
+        "vendor/mermaid/mermaid.min.js",
+        "src/content/drive.js",
+        "src/content/index.js"
       ],
       "css": [
-        "src/styles.css"
+        "src/viewer/viewer.css"
       ],
       "run_at": "document_idle"
     }
@@ -30,11 +31,13 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "src/lib/marked.min.js",
-        "src/lib/mermaid.min.js",
-        "src/styles.css",
-        "src/viewer.html",
-        "src/viewer.js"
+        "vendor/marked/marked.min.js",
+        "vendor/mermaid/mermaid.min.js",
+        "src/viewer/viewer.css",
+        "src/viewer/index.html",
+        "src/viewer/viewer.js",
+        "src/viewer/render.js",
+        "vendor/dompurify/purify.min.js"
       ],
       "matches": [
         "https://drive.google.com/*"

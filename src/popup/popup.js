@@ -29,7 +29,7 @@ document.getElementById('btn-render').addEventListener('click', async () => {
       try {
         await chrome.scripting.executeScript({
           target: { tabId: tab.id },
-          files: ['src/lib/marked.min.js', 'src/lib/mermaid.min.js', 'src/content.js']
+          files: ['vendor/marked/marked.min.js', 'vendor/mermaid/mermaid.min.js', 'src/content/drive.js', 'src/content/index.js']
         });
 
         // Wait a tiny bit for script to init
@@ -59,7 +59,7 @@ document.getElementById('btn-render').addEventListener('click', async () => {
       status.textContent = "Render triggered!";
       status.style.color = "green";
     } else {
-      status.textContent = response.reason || "Failed.";
+      status.textContent = response?.reason || "Failed.";
       status.style.color = "orange";
     }
   }
