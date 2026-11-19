@@ -89,55 +89,56 @@ The message bridge validates window, origin, and payload. The viewer registers i
 Source files are grouped by extension surface rather than file extension. A popup or viewer keeps its HTML, CSS and controller together; external runtime libraries and their licenses are kept outside application source.
 
 ```text
-manifest.json          # Build manifest template
-vite.config.ts
-tsconfig.json
-src/
-  content/
-    drive.ts
-    index.ts
-  popup/
-    index.html
-    popup.css
-    popup.ts
-  viewer/
-    index.html
-    main.tsx
-    app/
-      mount.tsx
-      Viewer.tsx
-      viewer.css
-    components/
-      Toolbar.tsx
-      ViewerStatus.tsx
-      MarkdownContent.tsx
-    hooks/
-      usePreferences.ts
-    rendering/
-      RenderedMarkdown.tsx
-      createMarkdownRenderer.ts
-    messaging/
-      protocol.ts
-      useViewerMessages.ts
-  shared/              # Typed messages, DOM utilities and runtime paths
-  types/vendor.d.ts    # Contracts for the existing vendor globals
-vendor/
-  dompurify/purify.min.js
-  marked/marked.min.js
-  mermaid/mermaid.min.js
-licenses/
-  DOMPurify.LICENSE
-  React.LICENSE
-  ReactDOM.LICENSE
-  Scheduler.LICENSE
-scripts/
-  build.mjs
-  vendor.cjs
-  verify-extension.cjs
-  package-extension.py
-tests/
-.github/workflows/
-dist/                  # Generated extension; ignored by Git
+drive-markdown-reader/
+├── manifest.json  # Build manifest template
+├── vite.config.ts
+├── tsconfig.json
+├── src/
+│   ├── content/
+│   │   ├── drive.ts
+│   │   └── index.ts
+│   ├── popup/
+│   │   ├── index.html
+│   │   ├── popup.css
+│   │   └── popup.ts
+│   ├── viewer/
+│   │   ├── index.html
+│   │   ├── main.tsx
+│   │   ├── app/
+│   │   │   ├── mount.tsx
+│   │   │   ├── Viewer.tsx
+│   │   │   └── viewer.css
+│   │   ├── components/
+│   │   │   ├── Toolbar.tsx
+│   │   │   ├── ViewerStatus.tsx
+│   │   │   └── MarkdownContent.tsx
+│   │   ├── hooks/
+│   │   │   └── usePreferences.ts
+│   │   ├── rendering/
+│   │   │   ├── RenderedMarkdown.tsx
+│   │   │   └── createMarkdownRenderer.ts
+│   │   └── messaging/
+│   │       ├── protocol.ts
+│   │       └── useViewerMessages.ts
+│   ├── shared/  # Typed messages, DOM utilities and runtime paths
+│   └── types/vendor.d.ts  # Contracts for the existing vendor globals
+├── vendor/
+│   ├── dompurify/purify.min.js
+│   ├── marked/marked.min.js
+│   └── mermaid/mermaid.min.js
+├── licenses/
+│   ├── DOMPurify.LICENSE
+│   ├── React.LICENSE
+│   ├── ReactDOM.LICENSE
+│   └── Scheduler.LICENSE
+├── scripts/
+│   ├── build.mjs
+│   ├── vendor.cjs
+│   ├── verify-extension.cjs
+│   └── package-extension.py
+├── tests/
+├── .github/workflows/
+└── dist/  # Generated extension; ignored by Git
 ```
 
 ## Tech stack
