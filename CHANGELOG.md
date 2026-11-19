@@ -1,10 +1,12 @@
 # Changelog
 
-## 1.0.0
+## 1.0.0 (planned)
 
-First packaged release, prepared for publication.
+First packaged release candidate for desktop Chrome. Publication is tracked on [GitHub Releases](https://github.com/tlavu2004/drive-markdown-reader/releases).
 
-- Read Markdown files in Drive and render Mermaid diagrams with a Graph / Code toggle.
+- Read Markdown in Drive and render Mermaid diagrams with a **Graph / Code** toggle.
 - Use light and dark themes, zoom, and file navigation where Drive exposes the required context.
-- Read numbered Markdown source in the native Drive viewer, including accessible same-origin frames.
-- Build the React viewer and TypeScript extension with Vite. Verify and package builds in GitHub Actions.
+- Reconstruct numbered Markdown source in accessible same-origin Drive preview frames.
+- Verify and package builds with GitHub Actions.
+
+See the [release notes](docs/releases/V1.0.0.md) for installation and limitations.

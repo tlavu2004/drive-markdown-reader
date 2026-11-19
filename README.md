@@ -206,7 +206,7 @@ GitHub Actions runs the shared verification workflow for PRs targeting `main`, p
 - [Privacy and local data handling](docs/guides/PRIVACY.md)
 - [Release procedure](docs/guides/RELEASING.md)
 - [Changelog](CHANGELOG.md)
-- [v1.0.0 release notes](docs/releases/v1.0.0.md)
+- [v1.0.0 release notes](docs/releases/V1.0.0.md)
 
 ## Author
 
