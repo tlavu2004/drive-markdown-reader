@@ -1,23 +1,25 @@
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const { viewer, load } = require('./helpers.cjs');
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { viewer, load, element } from './helpers.ts';
 test('viewer accepts only typed render messages from Drive parent', async () => {
   let { dom, w, content } = viewer();
   try {
     load(w, 'src/viewer/main.tsx');
-    content = w.document.getElementById('content');
-    const send = (data, origin = 'https://drive.google.com', source = w.parent) =>
+    content = element(w.document, 'content');
+    const send = (data: unknown, origin = 'https://drive.google.com', source = w.parent) =>
       w.dispatchEvent(new w.MessageEvent('message', { data, origin, source }));
     send(null); send({ action: 'RENDER', content: {} });
     send({ action: 'RENDER', content: 'wrong origin' }, 'https://evil.test');
-    send({ action: 'RENDER', content: 'wrong source' }, undefined, {});
+    const otherFrame = w.document.body.appendChild(w.document.createElement('iframe'));
+    assert.ok(otherFrame.contentWindow);
+    send({ action: 'RENDER', content: 'wrong source' }, undefined, otherFrame.contentWindow);
     assert.equal(content.textContent.trim(), 'Loading Markdown…');
     send({ action: 'RENDER', content: '# Valid' });
     for (let i = 0; i < 10; i++) await Promise.resolve();
-    assert.equal(content.querySelector('h1').textContent, 'Valid');
+    assert.equal(content.querySelector('h1')?.textContent, 'Valid');
   } finally { dom.window.close(); }
 });
-const { drive } = require('./helpers.cjs');
+import { drive } from './helpers.ts';
 test('content script rejects unrelated senders and malformed messages', async () => {
   const app = drive();
   try {

@@ -1,6 +1,6 @@
 # Testing and delivery
 
-Use Node.js 24.15 or later from the 24.x line. Run `npm ci` followed by `npm run check` to typecheck the app and Vite configuration, build the extension, run the Node tests, and verify `dist/`.
+Use Node.js 24.15 or later from the 24.x line. Run `npm ci` followed by `npm run check` to typecheck the app, Vite configuration, scripts, and tests, build the extension, run the TypeScript tests directly with Node 24, and verify `dist/`. Use `npm run dev` to rebuild on changes, then reload the extension and refresh Drive.
 
 The suite uses jsdom, simulated Drive responses, and Mermaid stubs. It covers the packaged entry points, source extraction, message validation, sanitization, request cancellation, and viewer controls. The package check verifies built assets and licenses. Browser-specific behavior and SVG rendering need manual checks.
 

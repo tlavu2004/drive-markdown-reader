@@ -23,4 +23,4 @@ React manages the toolbar, preferences, and load or error state. Marked parses M
 | `vendor/`, `licenses/` | Bundled libraries and notices |
 | `scripts/`, `tests/` | Build, verification, packaging, and regression tests |
 
-Vite builds the popup and viewer as ES modules and the content script as a classic bundle that Chrome can inject. The build emits source maps and copies the manifest, runtime libraries and licenses to `dist/`. For commands and checks, see [Testing and delivery](TESTING.md).
+Vite and `scripts/build.ts` build the popup and viewer as ES modules and the content script as a classic bundle that Chrome can inject. The build emits source maps and copies the manifest, runtime libraries and licenses to `dist/`. For commands and checks, see [Testing and delivery](TESTING.md).

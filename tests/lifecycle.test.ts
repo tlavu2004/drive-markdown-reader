@@ -1,6 +1,8 @@
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const { drive } = require('./helpers.cjs');
+import type { MockResponse } from './helpers.ts';
+import type { ContentMessage } from '../src/shared/messages.ts';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { drive } from './helpers.ts';
 test('closing survives DOM updates but manual reopen and another file still work', async () => {
   const app = drive();
   try {
@@ -20,7 +22,7 @@ test('closing survives DOM updates but manual reopen and another file still work
 test('late fetch result cannot replace a newer manually opened file', async () => {
   const app = drive();
   try {
-    let finishA; let signalA; let calls = 0;
+    let finishA!: (value: string) => void; let signalA!: AbortSignal; let calls = 0;
     app.w.fetch = async (_url, options) => {
       if (++calls === 1) {
         signalA = options.signal;
@@ -34,8 +36,8 @@ test('late fetch result cannot replace a newer manually opened file', async () =
     const frame = app.frame(); assert.ok(frame);
     finishA('# Stale content'); await app.settle();
     assert.equal(app.frame(), frame);
-    let message;
-    frame.contentWindow.postMessage = data => { message = data; };
+    let message!: ContentMessage;
+    app.viewerWindow().postMessage = (data: ContentMessage) => { message = data; };
     app.send({ action: 'VIEWER_READY' });
     assert.equal(message.content, '# New content');
   } finally { app.dom.window.close(); }
@@ -43,7 +45,7 @@ test('late fetch result cannot replace a newer manually opened file', async () =
 test('navigating away aborts loading and late response cannot reopen viewer', async () => {
   const app = drive();
   try {
-    let finish; let signal;
+    let finish!: (value: MockResponse) => void; let signal!: AbortSignal;
     app.w.fetch = (_url, options) => { signal = options.signal; return new Promise(resolve => { finish = resolve; }); };
     await app.tick();
     app.w.history.pushState({}, '', '/drive/my-drive');
@@ -58,14 +60,14 @@ test('extracted Drive navigation preserves Previous and Next file behavior', asy
   const app = drive();
   try {
     app.w.document.body.insertAdjacentHTML('beforeend', '<div><div data-id="fileA"></div><div data-id="fileB"></div></div>');
-    app.w.fetch = async url => ({ ok: true, text: async () => new URL(url).searchParams.get('id') });
+    app.w.fetch = async url => ({ ok: true, text: async () => new URL(url).searchParams.get('id') ?? '' });
     await app.tick();
     app.send({ action: 'NAVIGATE', direction: 1 }); await app.settle();
-    let message;
-    app.frame().contentWindow.postMessage = data => { message = data; };
+    let message!: ContentMessage;
+    app.viewerWindow().postMessage = (data: ContentMessage) => { message = data; };
     app.send({ action: 'VIEWER_READY' }); assert.equal(message.content, 'fileB');
     app.send({ action: 'NAVIGATE', direction: -1 }); await app.settle();
-    app.frame().contentWindow.postMessage = data => { message = data; };
+    app.viewerWindow().postMessage = (data: ContentMessage) => { message = data; };
     app.send({ action: 'VIEWER_READY' }); assert.equal(message.content, 'fileA');
   } finally { app.dom.window.close(); }
 });
