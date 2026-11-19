@@ -49,7 +49,8 @@ for (const file of files.filter(file => file.startsWith('assets/') && file.endsW
   // Resolve and parse all emitted JS imports, including shared chunks.
   buildSync({ entryPoints: [extensionFile(file)], bundle: true, write: false, platform: 'browser', logLevel: 'silent' });
 }
-for (const file of files) assert.ok(!/\.(?:ts|cjs|mjs)$/.test(file), `Development source leaked into package: ${file}`);
+for (const file of files) assert.ok(!/\.(?:tsx?|jsx|cjs|mjs)$/.test(file), `Development source leaked into package: ${file}`);
+for (const license of ['DOMPurify', 'React', 'ReactDOM', 'Scheduler']) extensionFile(`licenses/${license}.LICENSE`);
 for (const file of files.filter(file => file.startsWith('vendor/') || file.startsWith('licenses/'))) {
   assert.deepEqual(fs.readFileSync(extensionFile(file)), fs.readFileSync(path.join(project, file)), `Bundled library or license changed: ${file}`);
 }

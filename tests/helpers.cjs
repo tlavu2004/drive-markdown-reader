@@ -5,6 +5,23 @@ const root = path.resolve(__dirname, '..');
 const { buildSync } = require('esbuild');
 const compiled = new Map();
 function load(window, file) {
+  if (file === 'src/viewer/main.tsx') {
+    if (!compiled.has(file)) compiled.set(file, buildSync({
+      stdin: { contents: "export { act } from 'react'; export { mountViewer } from './src/viewer/app/mount';", resolveDir: root, loader: 'ts' },
+      bundle: true, write: false, format: 'iife', globalName: '__testModule',
+      define: { 'process.env.NODE_ENV': '"development"' }, target: 'chrome120'
+    }).outputFiles[0].text);
+    window.eval(compiled.get(file) + '\nwindow.__testModule = __testModule;');
+    const { act, mountViewer } = window.__testModule;
+    window.IS_REACT_ACT_ENVIRONMENT = true;
+    window.__viewerAct = act;
+    const dispatch = window.dispatchEvent.bind(window);
+    window.dispatchEvent = event => { let result; act(() => { result = dispatch(event); }); return result; };
+    const click = window.HTMLElement.prototype.click;
+    window.HTMLElement.prototype.click = function () { act(() => click.call(this)); };
+    act(() => { window.__viewerRoot = mountViewer(); });
+    return;
+  }
   if (file.endsWith('.ts')) {
     if (!compiled.has(file)) compiled.set(file, buildSync({
       entryPoints: [path.join(root, file)], bundle: true, write: false,
@@ -12,7 +29,7 @@ function load(window, file) {
     }).outputFiles[0].text);
     window.eval(compiled.get(file) + '\nwindow.__testModule = __testModule;');
     if (file.endsWith('/drive.ts')) window.DriveMarkdown = window.__testModule;
-    if (file.endsWith('/render.ts')) window.createMarkdownRenderer = window.__testModule.createMarkdownRenderer;
+    if (file.endsWith('/createMarkdownRenderer.ts')) window.createMarkdownRenderer = window.__testModule.createMarkdownRenderer;
     return;
   }
   window.eval(fs.readFileSync(path.join(root, file), 'utf8'));
@@ -22,9 +39,14 @@ function viewer() {
     url: 'https://extension.test/src/viewer/index.html', runScripts: 'outside-only'
   });
   const w = dom.window;
+  const close = w.close.bind(w);
+  w.close = () => {
+    if (w.__viewerRoot) w.__viewerAct(() => w.__viewerRoot.unmount());
+    close();
+  };
   const calls = [];
   w.mermaid = { initialize: config => calls.push(config), run: async () => {} };
-  for (const file of ['vendor/dompurify/purify.min.js', 'vendor/marked/marked.min.js', 'src/viewer/render.ts']) load(w, file);
+  for (const file of ['vendor/dompurify/purify.min.js', 'vendor/marked/marked.min.js', 'src/viewer/rendering/createMarkdownRenderer.ts']) load(w, file);
   return { dom, w, calls, content: w.document.getElementById('content') };
 }
 module.exports = { load, viewer };

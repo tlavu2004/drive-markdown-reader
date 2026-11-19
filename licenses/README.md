@@ -4,3 +4,5 @@
 
 - DOMPurify: `DOMPurify.LICENSE` is copied from the installed package by `npm run vendor` together with `vendor/dompurify/purify.min.js`.
 - Marked and Mermaid: existing bundled files were relocated without modification, including embedded notices. Their dependencies may carry additional notices in the bundles.
+
+- React, React DOM and Scheduler are bundled by Vite into the viewer JavaScript. `React.LICENSE`, `ReactDOM.LICENSE` and `Scheduler.LICENSE` are refreshed from the installed packages by `npm run vendor` and copied into `dist/licenses/`.

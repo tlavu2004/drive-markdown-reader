@@ -35,6 +35,16 @@ body.dark-mode {
     --blockquote-color: #8b949e;
 }
 
+/* Softer links with enough contrast against the dark reader background. */
+body.dark-mode .drive-md-reader-content a:any-link {
+    color: #79c0ff;
+}
+
+body.dark-mode .drive-md-reader-content a:any-link:hover,
+body.dark-mode .drive-md-reader-content a:any-link:focus-visible {
+    color: #b6dcff;
+}
+
 /* Toolbar */
 .drive-md-toolbar {
     position: sticky;

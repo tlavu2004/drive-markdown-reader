@@ -2,9 +2,10 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { viewer, load } = require('./helpers.cjs');
 test('viewer accepts only typed render messages from Drive parent', async () => {
-  const { dom, w, content } = viewer();
+  let { dom, w, content } = viewer();
   try {
-    load(w, 'src/viewer/viewer.ts');
+    load(w, 'src/viewer/main.tsx');
+    content = w.document.getElementById('content');
     const send = (data, origin = 'https://drive.google.com', source = w.parent) =>
       w.dispatchEvent(new w.MessageEvent('message', { data, origin, source }));
     send(null); send({ action: 'RENDER', content: {} });

@@ -41,8 +41,8 @@ This extension uses a **Content Script + Iframe** architecture to ensure stabili
 
 -   **Drive helpers (`src/content/drive.ts`)**: Detect file IDs, locate preview text and sibling files, and validate downloads.
 -   **Content controller (`src/content/index.ts`)**: Own viewer lifecycle, request cancellation, automatic opening and message validation.
--   **Renderer (`src/viewer/render.ts`)**: Parse and sanitize Markdown, preserve Mermaid source, and serialize diagram rendering.
--   **Viewer (`src/viewer/index.html`, `src/viewer/viewer.ts`)**: Own toolbar controls, saved preferences and display state in an extension-origin iframe.
+-   **Renderer (`src/viewer/rendering/createMarkdownRenderer.ts`)**: Parse and sanitize Markdown, preserve Mermaid source, and serialize diagram rendering.
+-   **React viewer (`src/viewer/main.tsx`, `src/viewer/app/Viewer.tsx`)**: Mount components in an extension-origin iframe. `Toolbar`, `ViewerStatus` and `MarkdownContent` retain the existing controls, loading/error messages and reader styling.
 -   **Popup (`src/popup/popup.ts`)**: Request manual opening and inject the content entry points when necessary.
 -   **Communication**: Validate message source, origin and payload; send only to the intended origin.
 
@@ -64,9 +64,23 @@ src/
     popup.ts
   viewer/
     index.html
-    viewer.css
-    viewer.ts
-    render.ts
+    main.tsx
+    app/
+      mount.tsx
+      Viewer.tsx
+      viewer.css
+    components/
+      Toolbar.tsx
+      ViewerStatus.tsx
+      MarkdownContent.tsx
+    hooks/
+      usePreferences.ts
+    rendering/
+      RenderedMarkdown.tsx
+      createMarkdownRenderer.ts
+    messaging/
+      protocol.ts
+      useViewerMessages.ts
   shared/              # Typed messages, DOM utilities and runtime paths
   types/vendor.d.ts    # Contracts for the existing vendor globals
 vendor/
@@ -75,6 +89,9 @@ vendor/
   mermaid/mermaid.min.js
 licenses/
   DOMPurify.LICENSE
+  React.LICENSE
+  ReactDOM.LICENSE
+  Scheduler.LICENSE
 scripts/
   build.mjs
   vendor.cjs
@@ -85,7 +102,7 @@ dist/                  # Generated extension; ignored by Git
 
 ### Development and verification
 
-The source uses TypeScript with strict checking and Vite. Node dependencies are required to build; Chrome loads only the generated `dist/` directory, including its bundled runtime libraries.
+The source uses TypeScript with strict checking and Vite, with React for the viewer. Popup and content scripts remain plain TypeScript. Node dependencies are required to build; Chrome loads only the generated `dist/` directory, including its bundled runtime libraries.
 
 ```sh
 npm ci
@@ -100,15 +117,27 @@ npm run check
 - `npm run verify:extension`: verify an existing `dist/` for missing assets, module chunks, manifest entries and license/library integrity.
 - `npm run dev`: build and watch both HTML pages and the classic content script. Reload the extension in Chrome after a rebuild; this does not use a Vite dev server or HMR in the extension.
 
-Popup and viewer use native ES modules; the content script bundles its imports into a classic IIFE so both manifest loading and manual `chrome.scripting.executeScript` work. Source maps are generated for debugging. Vendored parser, sanitizer and Mermaid versions remain unchanged. React migration is outside this change.
+Popup and viewer use native ES modules; the content script bundles its imports into a classic IIFE so both manifest loading and manual `chrome.scripting.executeScript` work. Source maps are generated for debugging. Vendored parser, sanitizer and Mermaid versions remain unchanged. React/React DOM are bundled locally into the viewer entry; no CDN or extra extension permission is required.
 
-After updating the pinned DOMPurify dependency, run `npm run vendor` to refresh both `vendor/dompurify/purify.min.js` and `licenses/DOMPurify.LICENSE`, then commit both files. Runtime libraries are bundled locally; no CDN is required.
+Viewer layout groups bootstrap and styling under `app/`, UI under `components/`, preferences under `hooks/`, renderer ownership under `rendering/`, and the Drive bridge under `messaging/`. The viewer root contains only its HTML and TypeScript entry points. Toolbar actions are passed from `Viewer` as callbacks, so the component has no dependency on a hook or the messaging bridge.
+
+Viewer lifecycle:
+
+- `useViewerMessages` registers the validated parent-message listener before announcing `VIEWER_READY`, then removes it on unmount.
+- `usePreferences` owns theme, Graph/Code and bounded zoom state, persists the existing storage keys, and removes viewer-only body classes on unmount.
+- React owns the toolbar and loading/error states. Only the Markdown renderer owns descendants of its rendering host, preventing React and Mermaid from editing the same DOM children.
+- Each renderer has an isolated Marked instance. Diagram work is serialized across renderers because Mermaid configuration is shared. Effect cleanup cancels pending jobs and ignores stale errors/completions.
+- StrictMode is enabled to exercise mount/cleanup behavior during development. The entry unmounts on non-persisted `pagehide` and preserves the mounted tree for back/forward cache restoration.
+
+The viewer entry is approximately 225 KB minified (70 KB gzip), including React, compared with about 4 KB before this migration. Popup and content-script bundles do not import React.
+
+After updating the pinned DOMPurify dependency, run `npm run vendor` to refresh both `vendor/dompurify/purify.min.js` and `licenses/DOMPurify.LICENSE`, and the React/React DOM/Scheduler license files, then commit the refreshed files. Runtime libraries are bundled locally; no CDN is required.
 
 The asset verifier checks the built manifest, HTML references, shared chunks, classic content-script syntax and packaged library/license bytes. The built-popup test checks the manual injection list against the built manifest.
 
-Regression tests use jsdom, the bundled Marked and DOMPurify, simulated Drive responses, and a Mermaid stub. Content-controller tests run the production `dist/content.js`; helper/renderer tests compile TypeScript modules with esbuild. Two additional smoke tests execute the built popup/viewer entry points and their shared chunks. They cover unsafe content, message validation, close/reopen behavior, stale requests, download errors, and theme rendering order. Real Drive selectors, authenticated downloads, Chrome extension isolation and actual Mermaid SVG layout still need browser verification.
+Regression tests use jsdom, the bundled Marked and DOMPurify, simulated Drive responses, and a Mermaid stub. Content-controller tests run the production `dist/content.js`; helper/renderer tests compile TypeScript modules with esbuild. React tests use development builds with `act` and StrictMode to check cleanup, preferences, message handling and rendering across remounts. Two additional smoke tests execute the built popup/viewer entry points and their shared chunks. They cover unsafe content, message validation, close/reopen behavior, stale requests, download errors, and theme rendering order. Real Drive selectors, authenticated downloads, Chrome extension isolation and actual Mermaid SVG layout still need browser verification.
 
-Tooling audit (2026-11-18): `npm audit` reports four high-severity entries from one [picomatch ReDoS advisory](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) in Vite's development dependency chain. The registry's latest picomatch release is still flagged; the suggested automatic fix downgrades Vite to an older major, so it has not been applied. `npm audit --omit=dev` reports no advisories. These tooling packages are not copied into `dist/`.
+Tooling audit (2026-11-19): `npm audit` reports no advisories for the current locked dependency tree. Re-run it when updating dependencies.
 
 Manual smoke checks after reloading the extension:
 
@@ -120,6 +149,7 @@ Manual smoke checks after reloading the extension:
 6. Verify Previous/Next on the available Drive list/grid; virtualized items outside the DOM may not be discoverable.
 
 ### Libraries Used
+-   [React](https://react.dev/) (Viewer UI)
 -   [Marked.js](https://marked.js.org/) (Markdown Parser)
 -   [DOMPurify](https://github.com/cure53/DOMPurify) (HTML Sanitizer)
 -   [Mermaid.js](https://mermaid.js.org/) (Diagrams)

@@ -1,4 +1,7 @@
-import { errorMessage } from '../shared/messages';
+import { errorMessage } from '../../shared/messages';
+
+// Mermaid has shared configuration, so serialize work across mounts as well as renders.
+let diagramQueue: Promise<void> = Promise.resolve();
 
 export function createMarkdownRenderer(contentDiv: HTMLElement, getDarkMode: () => boolean) {
   // Setup Marked
@@ -31,12 +34,13 @@ export function createMarkdownRenderer(contentDiv: HTMLElement, getDarkMode: () 
 
     return originalCodeRenderer(code);
   };
-  marked.use({ renderer });
+  // Each mount owns its parser; remounting must not stack global renderer overrides.
+  const parser = new marked.Marked({ renderer });
 
-  async function renderContent(markdownText: string) {
+  async function renderContent(markdownText: string, requestedVersion: number) {
     if (typeof markdownText !== "string") return;
 
-    contentDiv.innerHTML = DOMPurify.sanitize(marked.parse(markdownText, { async: false }), {
+    contentDiv.innerHTML = DOMPurify.sanitize(parser.parse(markdownText, { async: false }), {
       USE_PROFILES: { html: true },
       FORBID_TAGS: ['style', 'form', 'input', 'button'],
       SANITIZE_NAMED_PROPS: true
@@ -52,19 +56,25 @@ export function createMarkdownRenderer(contentDiv: HTMLElement, getDarkMode: () 
         return;
       }
 
-      const theme = getDarkMode() ? 'dark' : 'default';
-      mermaid.initialize({ startOnLoad: false, theme: theme, securityLevel: 'strict' });
+      const renderDiagrams = async () => {
+        if (requestedVersion !== version) return;
+        const theme = getDarkMode() ? 'dark' : 'default';
+        mermaid.initialize({ startOnLoad: false, theme: theme, securityLevel: 'strict' });
 
-      try {
-        await mermaid.run({ nodes: mermaidDivs });
-      } catch (e) {
-        console.error("Viewer: Mermaid Error:", e);
-        mermaidDivs.forEach(d => {
-          const error = document.createElement('pre');
-          error.textContent = `Mermaid Error: ${errorMessage(e)}\n${d.textContent}`;
-          d.replaceChildren(error);
-        });
-      }
+        try {
+          await mermaid.run({ nodes: mermaidDivs });
+        } catch (e) {
+          if (requestedVersion !== version) return;
+          console.error("Viewer: Mermaid Error:", e);
+          mermaidDivs.forEach(d => {
+            const error = document.createElement('pre');
+            error.textContent = `Mermaid Error: ${errorMessage(e)}\n${d.textContent}`;
+            d.replaceChildren(error);
+          });
+        }
+      };
+      diagramQueue = diagramQueue.catch(() => {}).then(renderDiagrams);
+      await diagramQueue;
     }
   }
 
@@ -73,7 +83,7 @@ export function createMarkdownRenderer(contentDiv: HTMLElement, getDarkMode: () 
   function scheduleRender(markdown: string) {
     const requestedVersion = ++version;
     queue = queue.catch(() => {}).then(() => {
-      if (requestedVersion === version) return renderContent(markdown);
+      if (requestedVersion === version) return renderContent(markdown, requestedVersion);
     });
     return queue;
   }

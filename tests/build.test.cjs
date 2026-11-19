@@ -7,6 +7,15 @@ const { buildSync } = require('esbuild');
 const root = path.resolve(__dirname, '..', 'dist');
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'manifest.json'), 'utf8'));
 const settle = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
+async function waitFor(check) {
+  const deadline = Date.now() + 2000;
+  while (true) {
+    try { check(); return; } catch (error) {
+      if (Date.now() >= deadline) throw error;
+      await new Promise(resolve => setTimeout(resolve, 5));
+    }
+  }
+}
 function page(reference) {
   const html = path.join(root, reference);
   const dom = new JSDOM(fs.readFileSync(html, 'utf8'), {
@@ -36,7 +45,7 @@ test('built popup injects the exact classic content bundle declared by manifest'
     assert.deepEqual(files, manifest.content_scripts[0].js);
     assert.equal(sends, 2);
     assert.equal(w.document.getElementById('status').textContent, 'Render triggered!');
-  } finally { dom.window.close(); }
+  } finally { w.dispatchEvent(new w.Event('pagehide')); dom.window.close(); }
 });
 test('built viewer loads its shared chunks and renders sanitized Markdown and controls', async () => {
   const { dom, w, start } = page('src/viewer/index.html');
@@ -49,16 +58,16 @@ test('built viewer loads its shared chunks and renders sanitized Markdown and co
     const themes = [];
     w.mermaid = { initialize: config => themes.push(config.theme), run: async () => {} };
     start();
+    w.dispatchEvent(new w.PageTransitionEvent('pagehide', { persisted: true }));
     w.dispatchEvent(new w.MessageEvent('message', {
       source: w.parent, origin: 'https://drive.google.com',
       data: { action: 'RENDER', content: '# Built viewer\n\n<img src=x onerror=alert(1)>\n\n```mermaid\ngraph TD; A-->B\n```' }
     }));
-    await settle();
-    assert.equal(w.document.querySelector('#content h1').textContent, 'Built viewer');
+    await waitFor(() => assert.equal(w.document.querySelector('#content h1')?.textContent, 'Built viewer'));
     assert.equal(w.document.querySelector('[onerror]'), null);
     w.document.getElementById('drive-md-darkmode').click(); await settle();
-    assert.deepEqual(themes, ['dark', 'default']);
+    await waitFor(() => assert.deepEqual(themes, ['dark', 'default']));
     w.document.getElementById('drive-md-zoom-in').click();
-    assert.equal(w.document.getElementById('drive-md-zoom-reset').textContent, '110%');
-  } finally { dom.window.close(); }
+    await waitFor(() => assert.equal(w.document.getElementById('drive-md-zoom-reset').textContent, '110%'));
+  } finally { w.dispatchEvent(new w.Event('pagehide')); dom.window.close(); }
 });
