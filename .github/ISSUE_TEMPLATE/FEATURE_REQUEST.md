@@ -10,4 +10,4 @@ What are you trying to do in Drive?
 
 ## Proposal
 
-Describe the behavior you want and how you would tell it works. Include alternatives you considered, including the native Drive preview if relevant.
+Describe the behavior you want and what a successful result would look like. Include alternatives you considered, including the native Drive preview if relevant.

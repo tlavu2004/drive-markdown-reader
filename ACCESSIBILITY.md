@@ -1,7 +1,7 @@
 # Accessibility
 
-Drive Markdown Reader aims to make Markdown and Mermaid easier to read in Chrome. The viewer uses native buttons, provides a light and dark theme, and supports zoom from 50% to 250%. Mermaid's **Graph / Code** control exposes the source as a text alternative.
+Drive Markdown Reader provides native buttons for viewer controls, light and dark reading themes, and zoom from 50% to 250%. **Graph / Code** lets readers inspect diagram source. Document authors can provide the context and text descriptions needed to understand their diagrams and images.
 
-The extension targets desktop Chrome. Keyboard and screen-reader behavior, focus when opening and closing the iframe, and dense diagrams at high zoom need additional manual verification. An author must still supply meaningful image descriptions and diagram context.
+The project targets desktop Chrome. Keyboard navigation, focus on opening and closing the iframe, screen-reader announcements, and dense diagrams at high zoom still need manual evaluation. The source view can help readers inspect a diagram but may still require a plain-language description.
 
-Report barriers using the [bug template](.github/ISSUE_TEMPLATE/BUG_REPORT.md). Include the browser, operating system, assistive technology, and steps, with private Drive information removed.
+Report barriers with the [bug template](.github/ISSUE_TEMPLATE/BUG_REPORT.md). Include the Chrome version, operating system, assistive technology if relevant, and the steps you tried. Remove private Drive details.
