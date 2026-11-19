@@ -63,10 +63,10 @@ test('close while loading aborts request and an empty file is sent to viewer', a
   } finally { app.dom.window.close(); }
 });
 test('viewer presents download errors as text', () => {
-  let { dom, w, content } = viewer();
+  const { dom, w } = viewer();
   try {
     load(w, 'src/viewer/main.tsx');
-    content = element(w.document, 'content');
+    const content = element(w.document, 'content');
     w.dispatchEvent(new w.MessageEvent('message', {
       source: w.parent, origin: 'https://drive.google.com',
       data: { action: 'RENDER_ERROR', content: '<img onerror=alert(1)>' }

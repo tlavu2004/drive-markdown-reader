@@ -144,12 +144,9 @@ export function findSiblingId(currentId: string | null, direction: -1 | 1) {
     const parent = currentEl.parentElement;
     if (!parent) return null;
 
-    let siblings = [];
-    if (currentEl.hasAttribute('data-id')) {
-        siblings = Array.from(parent.children).filter(el => el.hasAttribute('data-id'));
-    } else {
-        siblings = Array.from(parent.children).filter(el => el.tagName === currentEl.tagName);
-    }
+    const siblings = currentEl.hasAttribute('data-id')
+        ? Array.from(parent.children).filter(el => el.hasAttribute('data-id'))
+        : Array.from(parent.children).filter(el => el.tagName === currentEl.tagName);
 
     const index = siblings.indexOf(currentEl);
     if (index === -1) return null;
