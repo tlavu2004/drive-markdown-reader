@@ -60,12 +60,16 @@ In `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, an
 
 1. Open a Markdown file in Google Drive. When using Drive's native viewer, select **Markdown** to expose the source.
 2. If the extension viewer does not open automatically, click the extension icon and choose **Render Markdown**.
+
+   ![Drive Markdown Reader popup with the Render Markdown button](docs/images/render-markdown-popup.png)
+
 3. Use **Graph / Code** for Mermaid and **Dark / Light** for theme. Use the minus, percentage, and plus buttons to zoom out, reset to 100%, or zoom in. **Previous / Next** depends on the nearby files available in Drive's page.
+
+   ![Drive Markdown Reader viewer in Graph mode with a rendered Mermaid flowchart and toolbar](docs/images/mermaid-viewer.png)
+
 4. Click **Close** to return to Drive's preview.
 
 Use a fenced block labeled `mermaid` for diagrams. Relative images and links may fail to resolve because the extension viewer has a different document URL.
-
-Screenshots are pending. See the [capture guide](docs/guides/SCREENSHOTS.md) for the two views and filenames.
 
 ## Architecture
 
@@ -202,7 +206,6 @@ GitHub Actions runs the shared verification workflow for PRs targeting `main`, p
 - [Installation and troubleshooting](docs/guides/INSTALLATION.md)
 - [Architecture and source layout](docs/guides/ARCHITECTURE.md)
 - [Testing and delivery](docs/guides/TESTING.md)
-- [Screenshots to capture](docs/guides/SCREENSHOTS.md)
 - [Privacy and local data handling](docs/guides/PRIVACY.md)
 - [Release procedure](docs/guides/RELEASING.md)
 - [Changelog](CHANGELOG.md)
