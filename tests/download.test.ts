@@ -1,6 +1,8 @@
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const { drive, viewer, load } = require('./helpers.cjs');
+import type { MockResponse } from './helpers.ts';
+import type { ContentMessage } from '../src/shared/messages.ts';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { drive, viewer, load, element } from './helpers.ts';
 test('download rejects HTTP errors, login redirects, HTML and binary responses', async () => {
   const app = drive();
   try {
@@ -31,11 +33,11 @@ test('fallback reads only active preview text, including short documents', () =>
 test('ready before download completion delivers errors without retry loops', async () => {
   const app = drive();
   try {
-    let finish;
+    let finish!: (value: MockResponse) => void;
     app.w.fetch = () => new Promise(resolve => { finish = resolve; });
     await app.tick();
-    let message;
-    app.frame().contentWindow.postMessage = data => { message = data; };
+    let message!: ContentMessage;
+    app.viewerWindow().postMessage = (data: ContentMessage) => { message = data; };
     app.send({ action: 'VIEWER_READY' });
     finish({ ok: false, status: 403 }); await app.settle();
     assert.equal(message.action, 'RENDER_ERROR'); assert.match(message.content, /403/);
@@ -47,7 +49,7 @@ test('ready before download completion delivers errors without retry loops', asy
 test('close while loading aborts request and an empty file is sent to viewer', async () => {
   const app = drive();
   try {
-    let finish; let signal;
+    let finish!: (value: MockResponse) => void; let signal!: AbortSignal;
     app.w.fetch = (_url, options) => { signal = options.signal; return new Promise(resolve => { finish = resolve; }); };
     await app.tick(); app.send({ action: 'CLOSE_VIEWER' });
     assert.equal(signal.aborted, true);
@@ -55,7 +57,7 @@ test('close while loading aborts request and an empty file is sent to viewer', a
     assert.equal(app.frame(), null);
     app.w.fetch = async () => ({ ok: true, text: async () => '' });
     app.manual(); await app.settle();
-    let message; app.frame().contentWindow.postMessage = data => { message = data; };
+    let message!: ContentMessage; app.viewerWindow().postMessage = (data: ContentMessage) => { message = data; };
     app.send({ action: 'VIEWER_READY' });
     assert.equal(message.action, 'RENDER'); assert.equal(message.content, '');
   } finally { app.dom.window.close(); }
@@ -64,7 +66,7 @@ test('viewer presents download errors as text', () => {
   let { dom, w, content } = viewer();
   try {
     load(w, 'src/viewer/main.tsx');
-    content = w.document.getElementById('content');
+    content = element(w.document, 'content');
     w.dispatchEvent(new w.MessageEvent('message', {
       source: w.parent, origin: 'https://drive.google.com',
       data: { action: 'RENDER_ERROR', content: '<img onerror=alert(1)>' }

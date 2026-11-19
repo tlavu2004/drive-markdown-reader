@@ -132,9 +132,9 @@ drive-markdown-reader/
 │   ├── ReactDOM.LICENSE
 │   └── Scheduler.LICENSE
 ├── scripts/
-│   ├── build.mjs
-│   ├── vendor.cjs
-│   ├── verify-extension.cjs
+│   ├── build.ts
+│   ├── vendor.ts
+│   ├── verify-extension.ts
 │   └── package-extension.py
 ├── tests/
 ├── .github/workflows/
@@ -160,7 +160,7 @@ Popup and viewer build as ES modules. The content script builds as a classic bun
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Rebuild on changes. Reload the extension and refresh Drive to see updates. |
-| `npm run typecheck` | Check application and build configuration types. |
+| `npm run typecheck` | Check types in the app, build configuration, scripts, and tests. |
 | `npm run build` | Typecheck and build the extension into `dist/`. |
 | `npm test` | Build and run regression tests. |
 | `npm run verify:extension` | Check an existing build's manifest, assets, bundled scripts, and licenses. |
