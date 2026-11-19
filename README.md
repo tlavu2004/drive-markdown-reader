@@ -95,6 +95,7 @@ Source files are grouped by extension surface rather than file extension. A popu
 ```text
 drive-markdown-reader/
 ├── manifest.json  # Build manifest template
+├── eslint.config.js
 ├── vite.config.ts
 ├── tsconfig.json
 ├── src/
@@ -157,6 +158,7 @@ drive-markdown-reader/
 | Popup and Drive integration | TypeScript, Chrome tabs and scripting APIs |
 | Markdown and diagrams | Marked, DOMPurify, Mermaid |
 | Build and development | Vite 8, Node.js 24, npm |
+| Lint | ESLint, Babel parser for TS/TSX, React Hooks rules |
 | Tests | Node test runner, jsdom, esbuild, React `act` |
 | Delivery | GitHub Actions, versioned GitHub Releases, ZIP and SHA-256 |
 
@@ -167,11 +169,12 @@ Popup and viewer build as ES modules. The content script builds as a classic bun
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Rebuild on changes. Reload the extension and refresh Drive to see updates. |
+| `npm run lint` | Lint JavaScript, TypeScript, and React hooks. |
 | `npm run typecheck` | Check types in the app, build configuration, scripts, and tests. |
 | `npm run build` | Typecheck and build the extension into `dist/`. |
 | `npm test` | Build and run regression tests. |
 | `npm run verify:extension` | Check an existing build's manifest, assets, bundled scripts, and licenses. |
-| `npm run check` | Run the build, regression tests, and extension checks. |
+| `npm run check` | Run lint, the build, regression tests, and extension checks. |
 | `npm run vendor` | Refresh the vendored DOMPurify bundle and third-party license files. |
 
 ## Permissions and data
