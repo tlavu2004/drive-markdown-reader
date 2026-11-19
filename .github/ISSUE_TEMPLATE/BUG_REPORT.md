@@ -16,7 +16,7 @@ What happened and what did you expect?
 
 ## Environment
 
-- Extension version or commit:
+- Extension version or commit and install source (release ZIP, CI artifact, or local build):
 - Chrome and operating system:
 - Standalone file or folder preview:
 

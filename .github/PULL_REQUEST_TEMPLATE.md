@@ -1,13 +1,11 @@
 ## What changed
 
-Describe the problem and the resulting behavior.
+Describe the user-facing effect or the reason for the change.
 
 ## Verification
 
-- [ ] `npm run check` passed.
-- [ ] Chrome/Drive smoke checks were run for affected behavior, or the PR explains why they were unnecessary.
-- [ ] Documentation or release notes were updated when relevant.
+List the checks you actually ran and their results. For documentation changes, note which links, examples, or code claims you verified. For runtime changes, report automated checks and relevant Chrome/Drive smoke checks separately.
 
 ## Review notes
 
-Mention limits or follow-up work. Remove private Drive URLs and account information from screenshots and logs.
+List known limitations, unverified behavior, or follow-up work when relevant. Redact private Drive URLs and account information from screenshots and logs.
