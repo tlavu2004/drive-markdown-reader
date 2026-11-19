@@ -1,0 +1,50 @@
+name: Release package
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    uses: ./.github/workflows/verify.yml
+
+  publish:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: drive-markdown-reader
+          path: release-artifacts
+      - name: Check release ancestry, checksum and packaged version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          git merge-base --is-ancestor HEAD origin/main
+          (cd release-artifacts && sha256sum --check drive-markdown-reader.zip.sha256)
+          python3 scripts/package-extension.py --verify-tag "$RELEASE_TAG"
+      - name: Publish verified artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            release-artifacts/drive-markdown-reader.zip \
+            release-artifacts/drive-markdown-reader.zip.sha256 \
+            --verify-tag --title "Drive Markdown Reader $RELEASE_TAG" \
+            --notes-file "docs/releases/$RELEASE_TAG.md"
