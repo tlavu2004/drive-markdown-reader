@@ -43,6 +43,7 @@ function verifyHtml(reference, viewer = false) {
     }
   } finally { dom.window.close(); }
 }
+assert.deepEqual(fs.readFileSync(extensionFile('LICENSE')), fs.readFileSync(path.join(project, 'LICENSE')));
 verifyHtml(manifest.action.default_popup);
 verifyHtml('src/viewer/index.html', true);
 for (const file of files.filter(file => file.startsWith('assets/') && file.endsWith('.js'))) {

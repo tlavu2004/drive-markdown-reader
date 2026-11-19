@@ -1,159 +1,231 @@
 # Drive Markdown Reader
 
-A powerful Chrome Extension that renders **Markdown** files directly within Google Drive's preview pane. It transforms raw text into beautiful, readable HTML with support for diagrams, dark mode, and more.
+A Chrome Manifest V3 extension built with React 19, TypeScript, and Vite 8. Read Markdown and render Mermaid diagrams directly in Google Drive.
 
-![Demo](https://via.placeholder.com/800x400?text=Drive+Markdown+Reader+Demo)
+## Contents
 
-## Features
+- [Current features](#current-features)
+- [Install from GitHub Releases](#install-from-github-releases)
+- [Build from source](#build-from-source)
+- [Read Markdown in Drive](#read-markdown-in-drive)
+- [Architecture](#architecture)
+- [Tech stack](#tech-stack)
+- [Development commands](#development-commands)
+- [Permissions and data](#permissions-and-data)
+- [Troubleshooting](#troubleshooting)
+- [Verification](#verification)
+- [CI and delivery](#ci-and-delivery)
+- [Documentation](#documentation)
+- [Author](#author)
+- [Contributing](#contributing)
+- [License](#license)
 
--   **Seamless Integration**: Opens automatically when you preview a `.md` or `.markdown` file in Google Drive.
--   **Markdown Rendering**: Uses `marked.js` to render standard Markdown (headers, lists, tables, code blocks).
--   **Mermaid Diagrams**: Automatically renders Mermaid graphs (`graph`, `sequenceDiagram`, `gantt`, etc.) found in code blocks.
--   **Dark Mode**: Built-in Dark/Light theme switcher with persistence.
--   **Zoom Controls**: Zoom In/Out (50% - 250%) for better readability.
--   **Code/Graph Toggle**: Switch Mermaid diagrams between rendered view and source code with a single click.
--   **Isolated Viewer**: Runs in an extension-origin iframe to avoid conflicts with Google Drive's scripts and CSP.
--   **Syntax Highlighting**: Clean styling for code blocks.
+## Current features
 
-## Installation
+- **Drive integration:** open `.md` and `.markdown` files in an extension viewer. The viewer can open automatically when the extension detects a Markdown preview.
+- **Markdown rendering:** read headings, lists, tables, links, and styled code blocks. The reader uses Marked and sanitizes its HTML output with DOMPurify.
+- **Mermaid diagrams:** render flowcharts, sequence diagrams, and other supported Mermaid diagrams. Switch between the diagram and its source with **Graph / Code**.
+- **Reading controls:** switch between light and dark themes, zoom from 50% to 250%, and move between nearby files when Drive exposes the necessary file IDs.
+- **Isolated viewer:** the React interface runs in an extension-origin iframe. Theme, zoom, and Graph / Code preferences persist locally.
 
-1.  Clone or download this repository, then run `npm ci` and `npm run build` using Node.js 24.15 or newer in the 24.x release line.
-2.  Open Chrome and navigate to `chrome://extensions/`.
-3.  Enable **Developer mode** (top right toggle).
-4.  Click **Load unpacked**.
-5.  Select the generated `drive-markdown-reader/dist` folder. The repository root is build source, not the unpacked extension.
+Drive's native **Preview** can format regular Markdown. Use the extension when you need Mermaid diagrams or its reading controls.
 
-## Usage
+## Install from GitHub Releases
 
-1.  Navigate to Google Drive.
-2.  Double-click a Markdown file to open the preview.
-3.  The extension will automatically detect the file and overlay the rendered view.
-4.  **Toolbar Controls**:
-    -   **Graph / Code**: Toggle Mermaid diagrams.
-    -   **- / 100% / +**: Adjust zoom level.
-    -   **Dark / Light**: Switch theme.
-    -   **Close**: Return to standard Drive preview.
-5.  **Manual Trigger**: If it doesn't open automatically, click the extension icon in the browser toolbar and hit "Render Markdown".
+Use desktop Chrome. Installation from a release requires no local build.
 
-## Technical Architecture
+1. Open [GitHub Releases](https://github.com/tlavu2004/drive-markdown-reader/releases) and select a published version. If none is available, follow [Build from source](#build-from-source).
+2. Download `drive-markdown-reader.zip` under **Assets**. GitHub's **Source code** archives contain the project source.
+3. Extract the ZIP into a folder you plan to keep. The folder must directly contain `manifest.json`.
+4. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select that folder.
+5. Open the extension from Chrome's extensions menu. Pin it to the toolbar if desired.
 
-This extension uses a **Content Script + Iframe** architecture to ensure stability:
+To update, extract the new package over the same directory, click **Reload** on the extension card, and refresh any open Drive tabs. ZIP installations require manual updates.
 
--   **Drive helpers (`src/content/drive.ts`)**: Detect file IDs, locate preview text and sibling files, and validate downloads.
--   **Content controller (`src/content/index.ts`)**: Own viewer lifecycle, request cancellation, automatic opening and message validation.
--   **Renderer (`src/viewer/rendering/createMarkdownRenderer.ts`)**: Parse and sanitize Markdown, preserve Mermaid source, and serialize diagram rendering.
--   **React viewer (`src/viewer/main.tsx`, `src/viewer/app/Viewer.tsx`)**: Mount components in an extension-origin iframe. `Toolbar`, `ViewerStatus` and `MarkdownContent` retain the existing controls, loading/error messages and reader styling.
--   **Popup (`src/popup/popup.ts`)**: Request manual opening and inject the content entry points when necessary.
--   **Communication**: Validate message source, origin and payload; send only to the intended origin.
+Download the accompanying `.sha256` file to verify the ZIP. On Windows, run `Get-FileHash ./drive-markdown-reader.zip -Algorithm SHA256` and compare the hash. Before a release, reviewers can extract the **drive-markdown-reader** artifact from a successful GitHub Actions run and install the ZIP inside it. See the [installation guide](docs/guides/INSTALLATION.md).
+
+## Build from source
+
+Use Node.js 24.15 or later in the 24.x line, matching CI.
+
+```powershell
+git clone https://github.com/tlavu2004/drive-markdown-reader.git
+cd drive-markdown-reader
+npm ci
+npm run build
+npm run verify:extension
+```
+
+In `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the generated `dist/` directory. After rebuilding, reload the extension and refresh the Drive tab.
+
+## Read Markdown in Drive
+
+1. Open a Markdown file in Google Drive. When using Drive's native viewer, select **Markdown** to expose the source.
+2. If the extension viewer does not open automatically, click the extension icon and choose **Render Markdown**.
+3. Use **Graph / Code** for Mermaid, **Dark / Light** for theme, and **− / 100% / +** to adjust or reset zoom. **Previous / Next** depends on the nearby files available in Drive's page.
+4. Click **Close** to return to Drive's preview.
+
+Use a fenced block labeled `mermaid` for diagrams. Relative images and links may fail to resolve because the extension viewer has a different document URL.
+
+## Architecture
+
+The popup requests a manual render and injects the content script when needed. The content script identifies the active file, fetches Markdown from Drive or reconstructs numbered source lines in the page and accessible same-origin frames, then sends it to the viewer. The content controller handles automatic opening, request cancellation, and viewer teardown.
+
+```mermaid
+flowchart TD
+    Popup[Popup] -->|Manual render| Controller[Drive content controller]
+    Drive[Drive file or numbered source preview] --> Controller
+    Controller -->|Validated message| Viewer[React viewer iframe]
+    Viewer --> Marked[Marked]
+    Marked --> Purify[DOMPurify]
+    Purify --> Mermaid[Mermaid diagrams]
+    Viewer -->|Close or navigate| Controller
+```
+
+The message bridge validates window, origin, and payload. The viewer registers its listener before announcing readiness. React manages the toolbar, preferences, and load/error states, while the renderer owns the Markdown DOM. Each renderer uses its own Marked instance and serializes Mermaid work to avoid overlapping diagram renders. See [architecture and source layout](docs/guides/ARCHITECTURE.md).
 
 ### Directory layout
 
 Source files are grouped by extension surface rather than file extension. A popup or viewer keeps its HTML, CSS and controller together; external runtime libraries and their licenses are kept outside application source.
 
 ```text
-manifest.json          # Build manifest template
-vite.config.ts
-tsconfig.json
-src/
-  content/
-    drive.ts
-    index.ts
-  popup/
-    index.html
-    popup.css
-    popup.ts
-  viewer/
-    index.html
-    main.tsx
-    app/
-      mount.tsx
-      Viewer.tsx
-      viewer.css
-    components/
-      Toolbar.tsx
-      ViewerStatus.tsx
-      MarkdownContent.tsx
-    hooks/
-      usePreferences.ts
-    rendering/
-      RenderedMarkdown.tsx
-      createMarkdownRenderer.ts
-    messaging/
-      protocol.ts
-      useViewerMessages.ts
-  shared/              # Typed messages, DOM utilities and runtime paths
-  types/vendor.d.ts    # Contracts for the existing vendor globals
-vendor/
-  dompurify/purify.min.js
-  marked/marked.min.js
-  mermaid/mermaid.min.js
-licenses/
-  DOMPurify.LICENSE
-  React.LICENSE
-  ReactDOM.LICENSE
-  Scheduler.LICENSE
-scripts/
-  build.mjs
-  vendor.cjs
-  verify-extension.cjs
-tests/
-dist/                  # Generated extension; ignored by Git
+drive-markdown-reader/
+├── manifest.json  # Build manifest template
+├── vite.config.ts
+├── tsconfig.json
+├── src/
+│   ├── content/
+│   │   ├── drive.ts
+│   │   └── index.ts
+│   ├── popup/
+│   │   ├── index.html
+│   │   ├── popup.css
+│   │   └── popup.ts
+│   ├── viewer/
+│   │   ├── index.html
+│   │   ├── main.tsx
+│   │   ├── app/
+│   │   │   ├── mount.tsx
+│   │   │   ├── Viewer.tsx
+│   │   │   └── viewer.css
+│   │   ├── components/
+│   │   │   ├── Toolbar.tsx
+│   │   │   ├── ViewerStatus.tsx
+│   │   │   └── MarkdownContent.tsx
+│   │   ├── hooks/
+│   │   │   └── usePreferences.ts
+│   │   ├── rendering/
+│   │   │   ├── RenderedMarkdown.tsx
+│   │   │   └── createMarkdownRenderer.ts
+│   │   └── messaging/
+│   │       ├── protocol.ts
+│   │       └── useViewerMessages.ts
+│   ├── shared/  # Typed messages, DOM utilities and runtime paths
+│   └── types/vendor.d.ts  # Contracts for the existing vendor globals
+├── vendor/
+│   ├── dompurify/purify.min.js
+│   ├── marked/marked.min.js
+│   └── mermaid/mermaid.min.js
+├── licenses/
+│   ├── DOMPurify.LICENSE
+│   ├── React.LICENSE
+│   ├── ReactDOM.LICENSE
+│   └── Scheduler.LICENSE
+├── scripts/
+│   ├── build.mjs
+│   ├── vendor.cjs
+│   ├── verify-extension.cjs
+│   └── package-extension.py
+├── tests/
+├── .github/workflows/
+└── dist/  # Generated extension; ignored by Git
 ```
 
-### Development and verification
+## Tech stack
 
-The source uses TypeScript with strict checking and Vite, with React for the viewer. Popup and content scripts remain plain TypeScript. Node dependencies are required to build; Chrome loads only the generated `dist/` directory, including its bundled runtime libraries.
+| Area | Technology |
+| --- | --- |
+| Extension platform | Chrome Manifest V3, content script, extension-origin iframe |
+| Viewer | React 19, TypeScript, CSS |
+| Popup and Drive integration | TypeScript, Chrome tabs and scripting APIs |
+| Markdown and diagrams | Marked, DOMPurify, Mermaid |
+| Build and development | Vite 8, Node.js 24, npm |
+| Tests | Node test runner, jsdom, esbuild, React `act` |
+| Delivery | GitHub Actions, versioned GitHub Releases, ZIP and SHA-256 |
 
-```sh
+Popup and viewer build as ES modules. The content script builds as a classic bundle for manifest loading and manual injection. Vite emits source maps. The React viewer entry is approximately 225 KB minified or 70 KB gzip. Runtime libraries are packaged locally.
+
+## Development commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Rebuild on changes. Reload the extension and refresh Drive to see updates. |
+| `npm run typecheck` | Check application and build configuration types. |
+| `npm run build` | Typecheck and build the extension into `dist/`. |
+| `npm test` | Build and run regression tests. |
+| `npm run verify:extension` | Check an existing build's manifest, assets, bundled scripts, and licenses. |
+| `npm run check` | Run the build, regression tests, and extension checks. |
+| `npm run vendor` | Refresh the vendored DOMPurify bundle and third-party license files. |
+
+## Permissions and data
+
+The content script runs on `drive.google.com`. **activeTab** lets the popup act on the active tab, and **scripting** lets it inject the content script when needed. The extension reads the active preview or requests Markdown from Google Drive. It processes Markdown in the browser and stores reading preferences locally. Images with remote URLs can trigger browser requests to their hosts. See [privacy and data handling](docs/guides/PRIVACY.md).
+
+## Troubleshooting
+
+| Symptom | What to check |
+| --- | --- |
+| Chrome cannot find the manifest or reports a TypeScript MIME error | Load the extracted release folder containing `manifest.json` or the source build's `dist/`. |
+| The extension cannot find Markdown | Close the extension viewer, select Drive's **Markdown** source tab, then click **Render Markdown**. |
+| A diagram appears as code | Select **Graph** and check that the fence is labeled `mermaid`. |
+| An image or link is missing | Try an accessible absolute URL. |
+| **Previous / Next** is unavailable | Navigation depends on file IDs and the items currently present in Drive's page. |
+| An update seems unchanged | Check the loaded directory, reload the extension in Chrome, and refresh Drive. |
+
+See [installation and troubleshooting](docs/guides/INSTALLATION.md#troubleshooting).
+
+## Verification
+
+```powershell
 npm ci
 npm run check
 ```
 
-`npm run check` runs strict typechecking, production builds, all tests, and verification of the generated extension. Individual commands:
+The test suite covers the built popup and viewer, Drive source extraction, message validation, stale requests, sanitization, theme changes, and React cleanup. Drive responses and Mermaid rendering are simulated. Test authenticated downloads, iframe integration, and real Mermaid layout in Chrome before releasing.
 
-- `npm run typecheck`: check application and Vite configuration types without writing JS.
-- `npm run build`: clean production build to `dist/`, including popup, viewer, a classic `content.js`, runtime libraries and licenses.
-- `npm test`: build and run regression tests, including the generated content script and built popup/viewer smoke tests.
-- `npm run verify:extension`: verify an existing `dist/` for missing assets, module chunks, manifest entries and license/library integrity.
-- `npm run dev`: build and watch both HTML pages and the classic content script. Reload the extension in Chrome after a rebuild; this does not use a Vite dev server or HMR in the extension.
+1. Open a standalone Drive file and a folder preview. Try short and empty Markdown files.
+2. Close the viewer, interact with Drive, and reopen it from the popup.
+3. Switch files or close while loading and confirm stale results stay out of view.
+4. Check that a denied download shows a readable error and remains closable.
+5. Try valid and invalid Mermaid fences, theme changes, zoom, and **Graph / Code**.
+6. Try **Previous / Next** in the Drive list and grid.
 
-Popup and viewer use native ES modules; the content script bundles its imports into a classic IIFE so both manifest loading and manual `chrome.scripting.executeScript` work. Source maps are generated for debugging. Vendored parser, sanitizer and Mermaid versions remain unchanged. React/React DOM are bundled locally into the viewer entry; no CDN or extra extension permission is required.
+See [testing and delivery](docs/guides/TESTING.md).
 
-Viewer layout groups bootstrap and styling under `app/`, UI under `components/`, preferences under `hooks/`, renderer ownership under `rendering/`, and the Drive bridge under `messaging/`. The viewer root contains only its HTML and TypeScript entry points. Toolbar actions are passed from `Viewer` as callbacks, so the component has no dependency on a hook or the messaging bridge.
+## CI and delivery
 
-Viewer lifecycle:
+GitHub Actions runs the shared verification workflow for PRs targeting `main`, pushes to `main`, and manual runs. It uploads `drive-markdown-reader.zip` and its SHA-256 checksum. A matching version tag on a commit from `main` triggers the same checks. The publish job downloads and verifies that run's archive and uploads it with the versioned release notes. See [releasing](docs/guides/RELEASING.md).
 
-- `useViewerMessages` registers the validated parent-message listener before announcing `VIEWER_READY`, then removes it on unmount.
-- `usePreferences` owns theme, Graph/Code and bounded zoom state, persists the existing storage keys, and removes viewer-only body classes on unmount.
-- React owns the toolbar and loading/error states. Only the Markdown renderer owns descendants of its rendering host, preventing React and Mermaid from editing the same DOM children.
-- Each renderer has an isolated Marked instance. Diagram work is serialized across renderers because Mermaid configuration is shared. Effect cleanup cancels pending jobs and ignores stale errors/completions.
-- StrictMode is enabled to exercise mount/cleanup behavior during development. The entry unmounts on non-persisted `pagehide` and preserves the mounted tree for back/forward cache restoration.
+## Documentation
 
-The viewer entry is approximately 225 KB minified (70 KB gzip), including React, compared with about 4 KB before this migration. Popup and content-script bundles do not import React.
+- [Installation and troubleshooting](docs/guides/INSTALLATION.md)
+- [Architecture and source layout](docs/guides/ARCHITECTURE.md)
+- [Testing and delivery](docs/guides/TESTING.md)
+- [Privacy and local data handling](docs/guides/PRIVACY.md)
+- [Release procedure](docs/guides/RELEASING.md)
+- [Changelog](CHANGELOG.md)
+- [v1.0.0 release notes](docs/releases/v1.0.0.md)
 
-After updating the pinned DOMPurify dependency, run `npm run vendor` to refresh both `vendor/dompurify/purify.min.js` and `licenses/DOMPurify.LICENSE`, and the React/React DOM/Scheduler license files, then commit the refreshed files. Runtime libraries are bundled locally; no CDN is required.
+## Author
 
-The asset verifier checks the built manifest, HTML references, shared chunks, classic content-script syntax and packaged library/license bytes. The built-popup test checks the manual injection list against the built manifest.
+Developed and maintained by **Trương Lê Anh Vũ** ([GitHub profile](https://github.com/tlavu2004)).
 
-Regression tests use jsdom, the bundled Marked and DOMPurify, simulated Drive responses, and a Mermaid stub. Content-controller tests run the production `dist/content.js`; helper/renderer tests compile TypeScript modules with esbuild. React tests use development builds with `act` and StrictMode to check cleanup, preferences, message handling and rendering across remounts. Two additional smoke tests execute the built popup/viewer entry points and their shared chunks. They cover unsafe content, message validation, close/reopen behavior, stale requests, download errors, and theme rendering order. Real Drive selectors, authenticated downloads, Chrome extension isolation and actual Mermaid SVG layout still need browser verification.
+## Contributing
 
-Tooling audit (2026-11-19): `npm audit` reports no advisories for the current locked dependency tree. Re-run it when updating dependencies.
+Bug reports, documentation improvements, and focused code changes are welcome. See the [contribution guide](.github/CONTRIBUTING.md) for setup, branch conventions, and verification.
 
-Manual smoke checks after reloading the extension:
-
-1. Open Markdown in a standalone Drive preview and a folder preview; check a short and an empty file.
-2. Close the viewer, interact with Drive, and confirm it stays closed; reopen it using the popup.
-3. Switch files or close while downloading; confirm old content never reappears.
-4. Confirm a denied download shows a readable error and remains closable.
-5. Render a valid and an invalid Mermaid block, toggle theme repeatedly, then verify zoom and Graph/Code controls still work.
-6. Verify Previous/Next on the available Drive list/grid; virtualized items outside the DOM may not be discoverable.
-
-### Libraries Used
--   [React](https://react.dev/) (Viewer UI)
--   [Marked.js](https://marked.js.org/) (Markdown Parser)
--   [DOMPurify](https://github.com/cure53/DOMPurify) (HTML Sanitizer)
--   [Mermaid.js](https://mermaid.js.org/) (Diagrams)
+Follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report vulnerabilities privately using the [security policy](.github/SECURITY.md). See the [accessibility statement](ACCESSIBILITY.md) for current support, limitations, and how to report barriers.
 
 ## License
 
-MIT License. Feel free to fork and modify!
+The project uses the [MIT License](LICENSE). Release packages include the project license and [third-party notices](licenses/README.md).

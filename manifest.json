@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Drive Markdown Reader",
-  "version": "1.0",
-  "description": "Renders Markdown files directly in Google Drive preview.",
+  "version": "1.0.0",
+  "description": "Read Markdown and render Mermaid diagrams directly in Google Drive.",
   "permissions": [
     "activeTab",
     "scripting"

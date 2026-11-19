@@ -23,7 +23,7 @@ export default defineConfig({
       }
     },
     buildStart() {
-      for (const file of ['manifest.json', 'src/viewer/app/viewer.css', ...viewerLibraries]) this.addWatchFile(resolve(root, file));
+      for (const file of ['manifest.json', 'LICENSE', 'src/viewer/app/viewer.css', ...viewerLibraries]) this.addWatchFile(resolve(root, file));
     },
     generateBundle() {
       for (const directory of ['vendor', 'licenses']) {
@@ -36,6 +36,7 @@ export default defineConfig({
         }
       }
       this.emitFile({ type: 'asset', fileName: 'manifest.json', source: readFileSync(resolve(root, 'manifest.json')) });
+      this.emitFile({ type: 'asset', fileName: 'LICENSE', source: readFileSync(resolve(root, 'LICENSE')) });
       // Keep the existing content-script CSS behavior during the tooling migration.
       this.emitFile({ type: 'asset', fileName: 'content.css', source: readFileSync(resolve(root, 'src/viewer/app/viewer.css')) });
     }
