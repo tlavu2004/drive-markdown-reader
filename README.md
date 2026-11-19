@@ -32,7 +32,7 @@ Drive's native **Preview** can format regular Markdown. Use the extension when y
 
 ## Install from GitHub Releases
 
-Use desktop Chrome. Installation from a release requires no local build.
+Use desktop Chrome. The build targets Chrome 120. Check [GitHub Releases](https://github.com/tlavu2004/drive-markdown-reader/releases) for published packages.
 
 1. Open [GitHub Releases](https://github.com/tlavu2004/drive-markdown-reader/releases) and select a published version. If none is available, follow [Build from source](#build-from-source).
 2. Download `drive-markdown-reader.zip` under **Assets**. GitHub's **Source code** archives contain the project source.
@@ -40,9 +40,7 @@ Use desktop Chrome. Installation from a release requires no local build.
 4. Open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select that folder.
 5. Open the extension from Chrome's extensions menu. Pin it to the toolbar if desired.
 
-To update, extract the new package over the same directory, click **Reload** on the extension card, and refresh any open Drive tabs. ZIP installations require manual updates.
-
-Download the accompanying `.sha256` file to verify the ZIP. On Windows, run `Get-FileHash ./drive-markdown-reader.zip -Algorithm SHA256` and compare the hash. Before a release, reviewers can extract the **drive-markdown-reader** artifact from a successful GitHub Actions run and install the ZIP inside it. See the [installation guide](docs/guides/INSTALLATION.md).
+For checksum verification, manual updates, and CI review builds, see [Installation and troubleshooting](docs/guides/INSTALLATION.md).
 
 ## Build from source
 
@@ -62,10 +60,12 @@ In `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, an
 
 1. Open a Markdown file in Google Drive. When using Drive's native viewer, select **Markdown** to expose the source.
 2. If the extension viewer does not open automatically, click the extension icon and choose **Render Markdown**.
-3. Use **Graph / Code** for Mermaid, **Dark / Light** for theme, and **− / 100% / +** to adjust or reset zoom. **Previous / Next** depends on the nearby files available in Drive's page.
+3. Use **Graph / Code** for Mermaid and **Dark / Light** for theme. Use the minus, percentage, and plus buttons to zoom out, reset to 100%, or zoom in. **Previous / Next** depends on the nearby files available in Drive's page.
 4. Click **Close** to return to Drive's preview.
 
 Use a fenced block labeled `mermaid` for diagrams. Relative images and links may fail to resolve because the extension viewer has a different document URL.
+
+Screenshots are pending. See the [capture guide](docs/guides/SCREENSHOTS.md) for the two views and filenames.
 
 ## Architecture
 
@@ -82,7 +82,7 @@ flowchart TD
     Viewer -->|Close or navigate| Controller
 ```
 
-The message bridge validates window, origin, and payload. The viewer registers its listener before announcing readiness. React manages the toolbar, preferences, and load/error states, while the renderer owns the Markdown DOM. Each renderer uses its own Marked instance and serializes Mermaid work to avoid overlapping diagram renders. See [architecture and source layout](docs/guides/ARCHITECTURE.md).
+See [Architecture and source layout](docs/guides/ARCHITECTURE.md) for source extraction, rendering, and the viewer lifecycle.
 
 ### Directory layout
 
@@ -137,6 +137,9 @@ drive-markdown-reader/
 │   ├── verify-extension.cjs
 │   └── package-extension.py
 ├── tests/
+├── docs/
+│   ├── guides/
+│   └── releases/
 ├── .github/workflows/
 └── dist/  # Generated extension; ignored by Git
 ```
@@ -153,7 +156,7 @@ drive-markdown-reader/
 | Tests | Node test runner, jsdom, esbuild, React `act` |
 | Delivery | GitHub Actions, versioned GitHub Releases, ZIP and SHA-256 |
 
-Popup and viewer build as ES modules. The content script builds as a classic bundle for manifest loading and manual injection. Vite emits source maps. The React viewer entry is approximately 225 KB minified or 70 KB gzip. Runtime libraries are packaged locally.
+Popup and viewer build as ES modules. The content script builds as a classic bundle for manifest loading and manual injection. Vite emits source maps. Runtime libraries are packaged locally.
 
 ## Development commands
 
@@ -175,12 +178,9 @@ The content script runs on `drive.google.com`. **activeTab** lets the popup act 
 
 | Symptom | What to check |
 | --- | --- |
-| Chrome cannot find the manifest or reports a TypeScript MIME error | Load the extracted release folder containing `manifest.json` or the source build's `dist/`. |
-| The extension cannot find Markdown | Close the extension viewer, select Drive's **Markdown** source tab, then click **Render Markdown**. |
-| A diagram appears as code | Select **Graph** and check that the fence is labeled `mermaid`. |
-| An image or link is missing | Try an accessible absolute URL. |
-| **Previous / Next** is unavailable | Navigation depends on file IDs and the items currently present in Drive's page. |
-| An update seems unchanged | Check the loaded directory, reload the extension in Chrome, and refresh Drive. |
+| Chrome cannot load the extension | Select the extracted folder containing the manifest or the generated `dist/`. |
+| The reader cannot find Markdown | Select Drive's **Markdown** source tab and choose **Render Markdown**. |
+| Mermaid appears as code | Select **Graph** and check the `mermaid` fence. |
 
 See [installation and troubleshooting](docs/guides/INSTALLATION.md#troubleshooting).
 
@@ -191,26 +191,18 @@ npm ci
 npm run check
 ```
 
-The test suite covers the built popup and viewer, Drive source extraction, message validation, stale requests, sanitization, theme changes, and React cleanup. Drive responses and Mermaid rendering are simulated. Test authenticated downloads, iframe integration, and real Mermaid layout in Chrome before releasing.
-
-1. Open a standalone Drive file and a folder preview. Try short and empty Markdown files.
-2. Close the viewer, interact with Drive, and reopen it from the popup.
-3. Switch files or close while loading and confirm stale results stay out of view.
-4. Check that a denied download shows a readable error and remains closable.
-5. Try valid and invalid Mermaid fences, theme changes, zoom, and **Graph / Code**.
-6. Try **Previous / Next** in the Drive list and grid.
-
-See [testing and delivery](docs/guides/TESTING.md).
+The automated tests use jsdom with simulated Drive responses and a Mermaid stub. Before publishing, install the ZIP in Chrome and follow the [browser verification checklist](docs/guides/TESTING.md#chrome-smoke-checks).
 
 ## CI and delivery
 
-GitHub Actions runs the shared verification workflow for PRs targeting `main`, pushes to `main`, and manual runs. It uploads `drive-markdown-reader.zip` and its SHA-256 checksum. A matching version tag on a commit from `main` triggers the same checks. The publish job downloads and verifies that run's archive and uploads it with the versioned release notes. See [releasing](docs/guides/RELEASING.md).
+GitHub Actions runs the shared verification workflow for PRs targeting `main`, pushes to `main`, and manual runs. The `drive-markdown-reader` Actions artifact contains `drive-markdown-reader.zip` and `drive-markdown-reader.zip.sha256`. A matching version tag on a commit from `main` triggers the same checks. The publish job downloads and verifies that run's archive and uploads it with the versioned release notes. See [releasing](docs/guides/RELEASING.md).
 
 ## Documentation
 
 - [Installation and troubleshooting](docs/guides/INSTALLATION.md)
 - [Architecture and source layout](docs/guides/ARCHITECTURE.md)
 - [Testing and delivery](docs/guides/TESTING.md)
+- [Screenshots to capture](docs/guides/SCREENSHOTS.md)
 - [Privacy and local data handling](docs/guides/PRIVACY.md)
 - [Release procedure](docs/guides/RELEASING.md)
 - [Changelog](CHANGELOG.md)
@@ -218,7 +210,7 @@ GitHub Actions runs the shared verification workflow for PRs targeting `main`, p
 
 ## Author
 
-Developed and maintained by **Trương Lê Anh Vũ** ([GitHub profile](https://github.com/tlavu2004)).
+Developed and maintained by **Trương Lê Anh Vũ** ([@tlavu2004](https://github.com/tlavu2004)).
 
 ## Contributing
 

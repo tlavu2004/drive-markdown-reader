@@ -1,7 +1,14 @@
 # Privacy and permissions
 
-The reader works on `drive.google.com`. Its content script reads the relevant preview DOM or requests the selected file's Markdown through Google Drive. Markdown is processed in the browser using locally bundled libraries. The extension has no telemetry or separate backend.
+The manifest registers a content script on `https://drive.google.com/*`. The viewer and its packaged assets are also exposed to Drive pages through the manifest.
 
-`activeTab` lets the popup work with the active tab on user action. `scripting` lets the popup inject the content script when it is missing. The manifest declares the Drive domain for automatic detection.
+| Permission | Use |
+| --- | --- |
+| `activeTab` | Lets the popup inspect the active tab when invoked. |
+| `scripting` | Lets the popup inject the content script if it has not started. |
 
-The viewer stores theme, Graph / Code mode and zoom in browser local storage. It does not save Markdown contents as preferences. Remote images in a document can cause browser requests to their image hosts, and opening a link uses normal browser navigation. Drive access remains governed by Google and the current account.
+The script reads the visible Markdown preview or requests file contents from Google Drive, subject to the current browser session and Drive access. The download code accepts responses from Drive or its Googleusercontent download host after validation. The viewer processes the Markdown in memory with packaged libraries. The extension has no telemetry or separate application backend.
+
+Viewer preferences are saved in the extension iframe's browser `localStorage`. The keys are `drive-md-dark-mode`, `drive-md-mermaid-source`, and `drive-md-zoom`. File contents are not written to this storage.
+
+Remote images referenced in Markdown can cause requests to their hosts. Clicking a link uses ordinary browser navigation. Avoid sharing private Drive links or document contents in public reports.
