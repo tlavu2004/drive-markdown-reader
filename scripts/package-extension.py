@@ -42,7 +42,7 @@ def verify_tag(tag):
         version = check_version(json.loads(archive.read("manifest.json")))
     if tag != f"v{version}":
         raise SystemExit(f"Tag {tag} must match packaged version v{version}")
-    notes = ROOT / "docs" / "releases" / f"{tag}.md"
+    notes = ROOT / "docs" / "releases" / f"{tag.upper()}.md"
     if not notes.is_file() or not notes.read_text(encoding="utf-8").strip():
         raise SystemExit(f"Missing release notes for {tag}")
 

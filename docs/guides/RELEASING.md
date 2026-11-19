@@ -1,6 +1,6 @@
 # Releasing
 
-1. Set the same `x.y.z` version in `manifest.json`, `package.json`, and `package-lock.json`. Update [CHANGELOG.md](../../CHANGELOG.md) and add `docs/releases/vX.Y.Z.md`.
+1. Set the same `x.y.z` version in `manifest.json`, `package.json`, and `package-lock.json`. Update [CHANGELOG.md](../../CHANGELOG.md) and add `docs/releases/VX.Y.Z.md`.
 2. Merge the release preparation PR and confirm CI is green on the exact `main` commit being released. Install and test its CI artifact in Chrome.
 3. From that commit on `main`, create and push a signed version tag. For the first release:
 
