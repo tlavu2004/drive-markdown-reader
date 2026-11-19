@@ -1,12 +1,13 @@
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
-const { drive } = require('./helpers.cjs');
+import type { ContentMessage } from '../src/shared/messages.ts';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { drive } from './helpers.ts';
 // Minimal fixture retaining the alternating marker/pre structure supplied from real Drive.
-const fixture = fs.readFileSync(path.join(__dirname, 'fixtures/drive-markdown-source.html'), 'utf8');
+const fixture = fs.readFileSync(path.join(import.meta.dirname, 'fixtures/drive-markdown-source.html'), 'utf8');
 const expected = '# Reader example\n\n```mermaid\nflowchart TD\n  A[Start] --> B["<b>Done</b>"]\n```\n\nParagraph with two  spaces.\n';
-function showSource(app, html = fixture) {
+function showSource(app: ReturnType<typeof drive>, html = fixture) {
   app.w.history.replaceState({}, '', '/drive/u/2/my-drive');
   app.w.document.title = 'My Drive';
   app.w.document.body.innerHTML = '<pre>Unrelated page text</pre>' + html;
@@ -25,9 +26,9 @@ test('native source fallback sends the whole document through the built content 
     showSource(app); await app.settle();
     app.w.fetch = async () => { throw new Error('Folder preview must not fetch an unknown file'); };
     app.manual(); await app.settle();
-    let message;
+    let message!: ContentMessage;
     assert.ok(app.frame());
-    app.frame().contentWindow.postMessage = data => { message = data; };
+    app.viewerWindow().postMessage = (data: ContentMessage) => { message = data; };
     app.send({ action: 'VIEWER_READY' });
     assert.equal(message.action, 'RENDER');
     assert.equal(message.content, expected);
@@ -66,11 +67,11 @@ test('reads a same-origin native preview iframe instead of only the outer Drive 
   try {
     showSource(app, '<iframe title="Drive preview"></iframe>');
     const frame = app.w.document.querySelector('iframe');
-    frame.contentDocument.body.innerHTML = fixture;
+    frame!.contentDocument!.body.innerHTML = fixture;
     assert.equal(app.w.DriveMarkdown.scrapePreviewText(), expected);
     await app.settle(); app.manual(); await app.settle();
-    let message;
-    app.frame().contentWindow.postMessage = data => { message = data; };
+    let message!: ContentMessage;
+    app.viewerWindow().postMessage = (data: ContentMessage) => { message = data; };
     app.send({ action: 'VIEWER_READY' });
     assert.equal(message.action, 'RENDER'); assert.equal(message.content, expected);
   } finally { app.dom.window.close(); }
@@ -80,10 +81,10 @@ test('reads nested preview frames while excluding hidden and extension frames', 
   try {
     showSource(app, '<iframe hidden></iframe><iframe id="drive-md-viewer-frame"></iframe><iframe title="Preview"></iframe>');
     const frames = app.w.document.querySelectorAll('iframe');
-    frames[0].contentDocument.body.innerHTML = fixture;
-    frames[1].contentDocument.body.innerHTML = fixture;
-    frames[2].contentDocument.body.innerHTML = '<iframe></iframe>';
-    frames[2].contentDocument.querySelector('iframe').contentDocument.body.innerHTML = fixture;
+    frames[0]!.contentDocument!.body.innerHTML = fixture;
+    frames[1]!.contentDocument!.body.innerHTML = fixture;
+    frames[2]!.contentDocument!.body.innerHTML = '<iframe></iframe>';
+    frames[2]!.contentDocument!.querySelector('iframe')!.contentDocument!.body.innerHTML = fixture;
     assert.equal(app.w.DriveMarkdown.scrapePreviewText(), expected);
   } finally { app.dom.window.close(); }
 });
@@ -92,9 +93,9 @@ test('does not read inaccessible frames or combine two visible preview files', (
   try {
     showSource(app, '<iframe></iframe><iframe></iframe>');
     const frames = app.w.document.querySelectorAll('iframe');
-    frames.forEach(frame => { frame.contentDocument.body.innerHTML = fixture; });
+    frames.forEach(frame => { frame!.contentDocument!.body.innerHTML = fixture; });
     assert.equal(app.w.DriveMarkdown.scrapePreviewText(), null);
-    Object.defineProperty(frames[0], 'contentDocument', { get() { throw new app.w.DOMException('Blocked', 'SecurityError'); } });
+    Object.defineProperty(frames[0]!, 'contentDocument', { get() { throw new app.w.DOMException('Blocked', 'SecurityError'); } });
     assert.equal(app.w.DriveMarkdown.scrapePreviewText(), expected);
   } finally { app.dom.window.close(); }
 });

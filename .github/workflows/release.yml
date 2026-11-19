@@ -47,4 +47,4 @@ jobs:
             release-artifacts/drive-markdown-reader.zip \
             release-artifacts/drive-markdown-reader.zip.sha256 \
             --verify-tag --title "Drive Markdown Reader $RELEASE_TAG" \
-            --notes-file "docs/releases/$RELEASE_TAG.md"
+            --notes-file "docs/releases/${RELEASE_TAG^^}.md"

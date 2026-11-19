@@ -7,7 +7,7 @@ npm ci
 npm run check
 ```
 
-This runs strict TypeScript checks, the production build, Node/jsdom tests and package path checks. `npm run dev` watches source changes. Reload the extension in Chrome and refresh Drive after rebuilding.
+This checks TypeScript types in the app, tooling, and tests, builds the production extension, runs the TypeScript tests with Node and jsdom, and verifies the package paths. Node 24 runs the TypeScript scripts and tests directly. `npm run dev` watches source changes. Reload the extension in Chrome and refresh Drive after rebuilding.
 
 CI runs on PRs to `main`, pushes to `main`, and manual dispatch. The shared workflow uploads the ZIP and SHA-256 of the checked build. Automated tests simulate Drive and use a Mermaid stub.
 

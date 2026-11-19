@@ -1,6 +1,6 @@
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const { viewer } = require('./helpers.cjs');
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { viewer } from './helpers.ts';
 test('sanitizes raw HTML, unsafe URLs and Mermaid code without losing literal source', async () => {
   const { dom, w, calls, content } = viewer();
   try {
@@ -11,8 +11,8 @@ test('sanitizes raw HTML, unsafe URLs and Mermaid code without losing literal so
     assert.equal(content.querySelector('[onerror]'), null);
     assert.equal(content.querySelector('a[href^="javascript:"]'), null);
     assert.equal(content.querySelector('.mermaid-graph img'), null);
-    assert.equal(content.querySelector('.mermaid-source code').textContent, source);
-    assert.equal(calls[0].securityLevel, 'strict');
+    assert.equal(content.querySelector('.mermaid-source code')?.textContent, source);
+    assert.equal(calls[0]?.securityLevel, 'strict');
   } finally { dom.window.close(); }
 });
 test('Mermaid error details are displayed as text', async () => {
@@ -31,7 +31,7 @@ test('renderer customization does not change another consumer of the global Mark
     const render = w.createMarkdownRenderer(content, () => false);
     await render(markdown);
     assert.ok(content.querySelector('.mermaid-graph'));
-    assert.match(w.marked.parse(markdown), /<pre><code class="language-mermaid">/);
-    assert.doesNotMatch(w.marked.parse(markdown), /mermaid-graph/);
+    assert.match(w.marked.parse(markdown, { async: false }), /<pre><code class="language-mermaid">/);
+    assert.doesNotMatch(w.marked.parse(markdown, { async: false }), /mermaid-graph/);
   } finally { dom.window.close(); }
 });
